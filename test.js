@@ -94,3 +94,18 @@ const configCheckCallback = function (policy) {
 
   return compliant;
 };
+
+
+
+
+
+
+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OASValidation name="OAS-Validation">
+  <OASResource>oas.yaml</OASResource>
+  <Options>
+    <ValidateMessageBody>false</ValidateMessageBody>
+  </Options>
+  <Source>request</Source>
+</OASValidation>
