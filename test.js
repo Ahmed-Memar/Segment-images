@@ -102,7 +102,40 @@ const configCheckCallback = function (policy) {
 
 
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<OASValidation name="OAS-Validation">
+<ProxyEndpoint name="default">
+  <PreFlow name="PreFlow">
+    <Request>
+      <Step>
+        <Name>OAS-Validation</Name>
+      </Step>
+    </Request>
+    <Response/>
+  </PreFlow>
+
+  <Flows/>
+
+  <PostFlow name="PostFlow">
+    <Request/>
+    <Response/>
+  </PostFlow>
+
+  <HTTPProxyConnection>
+    <BasePath>/test</BasePath>
+    <VirtualHost>default</VirtualHost>
+  </HTTPProxyConnection>
+
+  <RouteRule name="default">
+    <TargetEndpoint>default</TargetEndpoint>
+  </RouteRule>
+
+</ProxyEndpoint>
+
+
+
+
+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OASValidation name="OAS-Validation" enabled="true" continueOnError="false">
   <OASResource>oas.yaml</OASResource>
   <Options>
     <ValidateMessageBody>false</ValidateMessageBody>
