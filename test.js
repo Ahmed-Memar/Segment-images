@@ -142,3 +142,48 @@ const configCheckCallback = function (policy) {
   </Options>
   <Source>request</Source>
 </OASValidation>
+
+
+
+
+// --- Block 2: AllowUnspecifiedParameters must exist and must be "false"
+// Why: Allowing unspecified parameters weakens schema enforcement
+//      and may increase attack surface.
+
+const allowUnspecified = xpath.select(
+  '/OASValidation/Options/AllowUnspecifiedParameters',
+  policy.getElement()
+);
+
+if (allowUnspecified.length === 0) {
+  compliant = false;
+  policy.addMessage({
+    plugin: plugin,
+    line: policy.getElement().lineNumber,
+    column: policy.getElement().columnNumber,
+    message:
+      'Missing required element "Options/AllowUnspecifiedParameters" in policy "' +
+      `${policy.getName()}". It must be set to "false" for strict schema validation.`
+  });
+} else {
+  const allowValue = (
+    allowUnspecified[0].firstChild &&
+    allowUnspecified[0].firstChild.data
+      ? allowUnspecified[0].firstChild.data
+      : ''
+  )
+    .trim()
+    .toLowerCase();
+
+  if (allowValue !== 'false') {
+    compliant = false;
+    policy.addMessage({
+      plugin: plugin,
+      line: allowUnspecified[0].lineNumber,
+      column: allowUnspecified[0].columnNumber,
+      message:
+        `Misconfigured OASValidation policy "${policy.getName()}": ` +
+        `"Options/AllowUnspecifiedParameters" must be "false" (currently "${allowValue || 'empty'}").`
+    });
+  }
+}
