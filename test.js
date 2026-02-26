@@ -134,81 +134,38 @@
 
 
 
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<OASValidation name="OAS-Validation" enabled="true" continueOnError="false">
-  <OASResource>oas.yaml</OASResource>
-  <Options>
-    <ValidateMessageBody>false</ValidateMessageBody>
-  </Options>
-  <Source>request</Source>
-</OASValidation>
+## Summary
 
+This MR implements security rule EX-CS005 for OASValidation policy.
 
+The control enforces a strict positive security model in enterprise context.
 
-// --- Block 2: Strict per-location enforcement for AllowUnspecifiedParameters
-// Why: In enterprise/banking environments, we enforce explicit per-location control
-//      to ensure strict positive security model and audit clarity.
+## Security Controls Implemented
 
-const aup = xpath.select(
-  '/OASValidation/Options/AllowUnspecifiedParameters',
-  policy.getElement()
-);
+- ValidateMessageBody must exist and be set to "true"
+- AllowUnspecifiedParameters must exist
+- Explicit per-location enforcement required:
+  - Header = false
+  - Query = false
+  - Cookie = false
 
-if (aup.length === 0) {
-  compliant = false;
-  policy.addMessage({
-    plugin: plugin,
-    line: policy.getElement().lineNumber,
-    column: policy.getElement().columnNumber,
-    message:
-      `Missing required element "Options/AllowUnspecifiedParameters" in policy "${policy.getName()}". ` +
-      `Strict mode requires explicit Header/Query/Cookie configuration.`,
-  });
-} else {
+## Rationale
 
-  ['Header', 'Query', 'Cookie'].forEach((tag) => {
+Per-location enforcement was chosen instead of global AllowUnspecifiedParameters=false to:
 
-    const node = xpath.select(
-      `/OASValidation/Options/AllowUnspecifiedParameters/${tag}`,
-      policy.getElement()
-    );
+- Improve audit clarity
+- Ensure explicit configuration
+- Reduce attack surface
+- Prevent HTTP parameter pollution
+- Align with enterprise / banking AppSec posture
 
-    if (node.length === 0) {
-      compliant = false;
-      policy.addMessage({
-        plugin: plugin,
-        line: aup[0].lineNumber,
-        column: aup[0].columnNumber,
-        message:
-          `Missing required element "Options/AllowUnspecifiedParameters/${tag}" ` +
-          `in policy "${policy.getName()}". It must be set to "false".`,
-      });
-      return;
-    }
+## Test Cases Added
 
-    const value = (node[0].firstChild && node[0].firstChild.data ? node[0].firstChild.data : '')
-      .trim()
-      .toLowerCase();
+- Missing ValidateMessageBody
+- Invalid ValidateMessageBody
+- Missing AllowUnspecifiedParameters
+- Missing per-location element
+- Invalid per-location value
+- Fully valid strict configuration
 
-    if (value !== 'false') {
-      compliant = false;
-      policy.addMessage({
-        plugin: plugin,
-        line: node[0].lineNumber,
-        column: node[0].columnNumber,
-        message:
-          `Misconfigured OASValidation policy "${policy.getName()}": ` +
-          `"Options/AllowUnspecifiedParameters/${tag}" must be "false" ` +
-          `(currently "${value || 'empty'}").`,
-      });
-    }
-  });
-}
-
-
-git commit -m "feat(EX-CS005): implement strict OASValidation security control
-
-- Enforce ValidateMessageBody=true
-- Enforce explicit AllowUnspecifiedParameters structure
-- Require Header/Query/Cookie=false (strict per-location mode)
-- Add test cases for missing, invalid and valid configurations"
+All scenarios were tested using apigeelint CLI.
