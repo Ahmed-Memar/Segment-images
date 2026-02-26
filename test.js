@@ -1,4 +1,4 @@
-const configCheckCallback = function (policy) {
+⁷const configCheckCallback = function (policy) {
   /*
     Goal (simple):
     - Ensure OASValidation is really validating the request body schema.
@@ -206,9 +206,9 @@ if (aup.length === 0) {
 }
 
 
+git commit -m "feat(EX-CS005): implement strict OASValidation security control
 
-<AllowUnspecifiedParameters>
-  <Header>false</Header>
-  <Query>false</Query>
-  <Cookie>false</Cookie>
-</AllowUnspecifiedParameters>
+- Enforce ValidateMessageBody=true
+- Enforce explicit AllowUnspecifiedParameters structure
+- Require Header/Query/Cookie=false (strict per-location mode)
+- Add test cases for missing, invalid and valid configurations"
