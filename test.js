@@ -145,45 +145,70 @@ const configCheckCallback = function (policy) {
 
 
 
+// --- Block 2: Strict per-location enforcement for AllowUnspecifiedParameters
+// Why: In enterprise/banking environments, we enforce explicit per-location control
+//      to ensure strict positive security model and audit clarity.
 
-// --- Block 2: AllowUnspecifiedParameters must exist and must be "false"
-// Why: Allowing unspecified parameters weakens schema enforcement
-//      and may increase attack surface.
-
-const allowUnspecified = xpath.select(
+const aup = xpath.select(
   '/OASValidation/Options/AllowUnspecifiedParameters',
   policy.getElement()
 );
 
-if (allowUnspecified.length === 0) {
+if (aup.length === 0) {
   compliant = false;
   policy.addMessage({
     plugin: plugin,
     line: policy.getElement().lineNumber,
     column: policy.getElement().columnNumber,
     message:
-      'Missing required element "Options/AllowUnspecifiedParameters" in policy "' +
-      `${policy.getName()}". It must be set to "false" for strict schema validation.`
+      `Missing required element "Options/AllowUnspecifiedParameters" in policy "${policy.getName()}". ` +
+      `Strict mode requires explicit Header/Query/Cookie configuration.`,
   });
 } else {
-  const allowValue = (
-    allowUnspecified[0].firstChild &&
-    allowUnspecified[0].firstChild.data
-      ? allowUnspecified[0].firstChild.data
-      : ''
-  )
-    .trim()
-    .toLowerCase();
 
-  if (allowValue !== 'false') {
-    compliant = false;
-    policy.addMessage({
-      plugin: plugin,
-      line: allowUnspecified[0].lineNumber,
-      column: allowUnspecified[0].columnNumber,
-      message:
-        `Misconfigured OASValidation policy "${policy.getName()}": ` +
-        `"Options/AllowUnspecifiedParameters" must be "false" (currently "${allowValue || 'empty'}").`
-    });
-  }
+  ['Header', 'Query', 'Cookie'].forEach((tag) => {
+
+    const node = xpath.select(
+      `/OASValidation/Options/AllowUnspecifiedParameters/${tag}`,
+      policy.getElement()
+    );
+
+    if (node.length === 0) {
+      compliant = false;
+      policy.addMessage({
+        plugin: plugin,
+        line: aup[0].lineNumber,
+        column: aup[0].columnNumber,
+        message:
+          `Missing required element "Options/AllowUnspecifiedParameters/${tag}" ` +
+          `in policy "${policy.getName()}". It must be set to "false".`,
+      });
+      return;
+    }
+
+    const value = (node[0].firstChild && node[0].firstChild.data ? node[0].firstChild.data : '')
+      .trim()
+      .toLowerCase();
+
+    if (value !== 'false') {
+      compliant = false;
+      policy.addMessage({
+        plugin: plugin,
+        line: node[0].lineNumber,
+        column: node[0].columnNumber,
+        message:
+          `Misconfigured OASValidation policy "${policy.getName()}": ` +
+          `"Options/AllowUnspecifiedParameters/${tag}" must be "false" ` +
+          `(currently "${value || 'empty'}").`,
+      });
+    }
+  });
 }
+
+
+
+<AllowUnspecifiedParameters>
+  <Header>false</Header>
+  <Query>false</Query>
+  <Cookie>false</Cookie>
+</AllowUnspecifiedParameters>
