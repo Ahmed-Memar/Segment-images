@@ -1,4 +1,4 @@
-⁷const configCheckCallback = function (policy) {
+8⁷const configCheckCallback = function (policy) {
   /*
     Goal (simple):
     - Ensure OASValidation is really validating the request body schema.
@@ -169,3 +169,9 @@ Per-location enforcement was chosen instead of global AllowUnspecifiedParameters
 - Fully valid strict configuration
 
 All scenarios were tested using apigeelint CLI.
+
+
+Additionally, per-location control allows more granular governance.
+If required in the future, a specific parameter location (e.g., Header)
+could be relaxed in a controlled manner without weakening validation
+for all other locations.
