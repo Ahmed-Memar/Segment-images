@@ -44,22 +44,39 @@ const configCheckCallback = function (policy) {
         .trim()
         .toLowerCase();
 
-      if (value !== 'false') {
-        compliant = false;
+if (value !== 'false') {
 
-        policy.addMessage({
-          plugin: tag === 'Cookie' ? warningPlugin : plugin,
-          line: node[0].lineNumber,
-          column: node[0].columnNumber,
-          message:
-            `Misconfigured OASValidation policy: ` +
-            `"Options/AllowUnspecifiedParameters/${tag}" must be "false" ` +
-            `(currently "${value || 'empty'}").`
-        });
-      }
+  if (tag === 'Query') {
 
+    compliant = false;
+
+    policy.addMessage({
+      plugin: plugin,
+      line: node[0].lineNumber,
+      column: node[0].columnNumber,
+      message:
+        `Misconfigured OASValidation policy: ` +
+        `"Options/AllowUnspecifiedParameters/Query" must be "false". ` +
+        `Query parameters must be explicitly documented in the OpenAPI specification ` +
+        `(currently "${value || 'empty'}").`
     });
+
+  } else if (tag === 'Cookie') {
+
+    policy.addMessage({
+      plugin: warningPlugin,
+      line: node[0].lineNumber,
+      column: node[0].columnNumber,
+      message:
+        `OASValidation recommendation: ` +
+        `"Options/AllowUnspecifiedParameters/Cookie" should be set to "false". ` +
+        `Unexpected cookies may appear due to browsers or infrastructure components ` +
+        `(currently "${value || 'empty'}").`
+    });
+
   }
+
+}
 
   return compliant;
 };
