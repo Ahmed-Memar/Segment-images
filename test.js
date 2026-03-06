@@ -1,6 +1,27 @@
-Update OASValidation plugin after review.
+if (node.length === 0) {
 
-- Enforce ValidateMessageBody to be set to "true".
-- Enforce AllowUnspecifiedParameters/Query to be "false".
-- AllowUnspecifiedParameters/Cookie triggers a warning if set to "true".
-- Ignore Header parameters as they may be injected by infrastructure.
+  if (tag === 'Query') {
+    compliant = false;
+
+    policy.addMessage({
+      plugin: plugin,
+      line: aup[0].lineNumber,
+      column: aup[0].columnNumber,
+      message:
+        `OASValidation misconfiguration: Missing "AllowUnspecifiedParameters/Query".`,
+    });
+
+  } else if (tag === 'Cookie') {
+
+    policy.addMessage({
+      plugin: warningPlugin,
+      line: aup[0].lineNumber,
+      column: aup[0].columnNumber,
+      message:
+        `OASValidation recommendation: "AllowUnspecifiedParameters/Cookie" should be set to "false".`,
+    });
+
+  }
+
+  return;
+}
