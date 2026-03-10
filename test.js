@@ -1,13 +1,21 @@
-const proxies = bundle.getProxyEndpoints();
+<ProxyEndpoint name="default">
 
-proxies.forEach(proxy => {
-  const flows = proxy.getFlows();
+  <PreFlow name="PreFlow">
+    <Request/>
+    <Response/>
+  </PreFlow>
 
-  flows.forEach(flow => {
-    const cond = flow.getCondition() || "";
+  <Flows>
+    <Flow name="PostFlow">
+      <Condition>request.verb = "POST"</Condition>
+    </Flow>
+  </Flows>
 
-    if (/request\.verb\s*=\s*"(POST|PUT|PATCH)"/i.test(cond)) {
-      hasBodyMethod = true;
-    }
-  });
-});
+  <HTTPProxyConnection>
+    <BasePath>/test</BasePath>
+    <VirtualHost>default</VirtualHost>
+  </HTTPProxyConnection>
+
+  <RouteRule name="noroute"/>
+
+</ProxyEndpoint>
