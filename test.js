@@ -1,9 +1,14 @@
 <ProxyEndpoint name="default">
 
-  <PreFlow name="PreFlow">
-    <Request/>
-    <Response/>
-  </PreFlow>
+<PreFlow name="PreFlow">
+  <Request>
+    <Step>
+      <Name>DummyStep</Name>
+    </Step>
+  </Request>
+  <Response/>
+</PreFlow>
+
 
   <Flows>
     <Flow name="PostFlow">
