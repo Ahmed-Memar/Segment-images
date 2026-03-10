@@ -1,68 +1,13 @@
-const onProxyEndpoint = function (endpoint, cb) {
+const proxies = bundle.getProxyEndpoints();
 
-  debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
+proxies.forEach(proxy => {
+  const flows = proxy.getFlows();
 
-  // Check if OASValidation policy exists in the bundle
-  const policies = endpoint.parent.getPolicies()
-    .filter(p => p.getType() === "OASValidation");
+  flows.forEach(flow => {
+    const cond = flow.getCondition() || "";
 
-  // If no OASValidation policy → skip plugin
-  if (policies.length === 0) {
-    if (typeof cb === 'function') {
-      cb(null, false);
+    if (/request\.verb\s*=\s*"(POST|PUT|PATCH)"/i.test(cond)) {
+      hasBodyMethod = true;
     }
-    return;
-  }
-
-  let checker = new SecurityLib.PolicyChecker(
-    plugin,
-    'OASValidation',
-    debug,
-    configCheckCallback
-  );
-
-  let hasIssue = checker.check(endpoint);
-
-  if (typeof cb === 'function') {
-    cb(null, hasIssue);
-  }
-};
-
-
-
-
-
-
-
-
-
-
-const onProxyEndpoint = function(endpoint, cb) {
-
-  debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
-
-  // Check if MessageValidation policy exists
-  const policies = endpoint.parent.getPolicies()
-    .filter(p => p.getType() === "MessageValidation");
-
-  // If no MessageValidation policy → skip plugin
-  if (policies.length === 0) {
-    if (typeof cb === 'function') {
-      cb(null, false);
-    }
-    return;
-  }
-
-  let checker = new SecurityLib.PolicyChecker(
-    plugin,
-    'MessageValidation',
-    debug,
-    configCheckCallback
-  );
-
-  let hasIssue = checker.check(endpoint);
-
-  if(typeof cb == 'function') {
-    cb(null, hasIssue);
-  }
-};
+  });
+});
