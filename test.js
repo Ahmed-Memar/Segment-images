@@ -1,32 +1,51 @@
-<ProxyEndpoint name="default">
-    <PreFlow name="PreFlow">
-        <Request>
-            <Step>
-                <Name>ValidateXML</Name>
-            </Step>
-        </Request>
-        <Response/>
-    </PreFlow>
+/**
+ * EX-CS004
+ * Data Schema Control
+ *
+ * Ensure that at least one schema validation policy exists
+ */
 
-    <Flows/>
+const plugin = {
+  ruleId: "EX-CS004",
+  name: "Data Schema Control",
+  message: "API must implement schema validation (OASValidation or MessageValidation)",
+  fatal: false,
+  severity: 2,
+  nodeType: "Bundle",
+  enabled: true
+};
 
-    <HTTPProxyConnection>
-        <BasePath>/test-soap-01</BasePath>
-        <VirtualHost>default</VirtualHost>
-    </HTTPProxyConnection>
+const onBundle = (bundle, cb) => {
 
-    <RouteRule name="default">
-        <TargetEndpoint>default</TargetEndpoint>
-    </RouteRule>
+  const policies = bundle.getPolicies();
 
-</ProxyEndpoint>
+  let hasOAS = false;
+  let hasMV = false;
 
+  policies.forEach(p => {
+    const type = p.getType();
 
+    if (type === "OASValidation") {
+      hasOAS = true;
+    }
 
+    if (type === "MessageValidation") {
+      hasMV = true;
+    }
+  });
 
+  if (!hasOAS && !hasMV) {
+    bundle.addMessage({
+      plugin,
+      message:
+        "Data Schema Control failed: API must implement OASValidation (REST) or MessageValidation (SOAP/XML)"
+    });
+  }
 
+  cb(null, false);
+};
 
-<MessageValidation name="ValidateXML">
-    <DisplayName>Validate XML Request</DisplayName>
-    <Source>request</Source>
-</MessageValidation>
+module.exports = {
+  plugin,
+  onBundle
+};
