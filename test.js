@@ -1,51 +1,68 @@
-/**
- * EX-CS004
- * Data Schema Control
- *
- * Ensure that at least one schema validation policy exists
- */
+const onProxyEndpoint = function (endpoint, cb) {
 
-const plugin = {
-  ruleId: "EX-CS004",
-  name: "Data Schema Control",
-  message: "API must implement schema validation (OASValidation or MessageValidation)",
-  fatal: false,
-  severity: 2,
-  nodeType: "Bundle",
-  enabled: true
-};
+  debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
 
-const onBundle = (bundle, cb) => {
+  // Check if OASValidation policy exists in the bundle
+  const policies = endpoint.parent.getPolicies()
+    .filter(p => p.getType() === "OASValidation");
 
-  const policies = bundle.getPolicies();
-
-  let hasOAS = false;
-  let hasMV = false;
-
-  policies.forEach(p => {
-    const type = p.getType();
-
-    if (type === "OASValidation") {
-      hasOAS = true;
+  // If no OASValidation policy → skip plugin
+  if (policies.length === 0) {
+    if (typeof cb === 'function') {
+      cb(null, false);
     }
-
-    if (type === "MessageValidation") {
-      hasMV = true;
-    }
-  });
-
-  if (!hasOAS && !hasMV) {
-    bundle.addMessage({
-      plugin,
-      message:
-        "Data Schema Control failed: API must implement OASValidation (REST) or MessageValidation (SOAP/XML)"
-    });
+    return;
   }
 
-  cb(null, false);
+  let checker = new SecurityLib.PolicyChecker(
+    plugin,
+    'OASValidation',
+    debug,
+    configCheckCallback
+  );
+
+  let hasIssue = checker.check(endpoint);
+
+  if (typeof cb === 'function') {
+    cb(null, hasIssue);
+  }
 };
 
-module.exports = {
-  plugin,
-  onBundle
+
+
+
+
+
+
+
+
+
+const onProxyEndpoint = function(endpoint, cb) {
+
+  debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
+
+  // Check if MessageValidation policy exists
+  const policies = endpoint.parent.getPolicies()
+    .filter(p => p.getType() === "MessageValidation");
+
+  // If no MessageValidation policy → skip plugin
+  if (policies.length === 0) {
+    if (typeof cb === 'function') {
+      cb(null, false);
+    }
+    return;
+  }
+
+  let checker = new SecurityLib.PolicyChecker(
+    plugin,
+    'MessageValidation',
+    debug,
+    configCheckCallback
+  );
+
+  let hasIssue = checker.check(endpoint);
+
+  if(typeof cb == 'function') {
+    cb(null, hasIssue);
+  }
 };
