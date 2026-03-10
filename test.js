@@ -1,9 +1,17 @@
-if (condition) {
-  const bodyMethods = ["POST", "PUT", "PATCH"];
+bundle.getProxyEndpoints().forEach(pe => {
+  pe.getFlows().forEach(flow => {
 
-  bodyMethods.forEach(method => {
-    if (condition.includes(`request.verb = "${method}"`)) {
-      hasBodyMethod = true;
+    const condition = flow.getCondition();
+
+    if (condition) {
+      const bodyMethods = ["POST", "PUT", "PATCH"];
+
+      bodyMethods.forEach(method => {
+        if (condition.includes(`request.verb = "${method}"`)) {
+          hasBodyMethod = true;
+        }
+      });
     }
+
   });
-}
+});
