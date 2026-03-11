@@ -1,14 +1,9 @@
-bundle.getProxyEndpoints().forEach(pe => {
-  pe.getFlows().forEach(flow => {
-    const condition = flow.getCondition();
+Add two custom ApigeeLint plugins for Data Schema Control security requirement.
 
-    if (condition) {
-      const conditionStr = condition.getExpression() || "";
-      const verbRegex = /request\.verb\s*(?:=|==)\s*['"]?(POST|PUT|PATCH)['"]?/i;
+- EX-CS006: Validate SOAP MessageValidation policy configuration (ResourceURL, Element checks).
+- EX-CS007: Ensure APIs accepting request bodies (POST, PUT, PATCH) implement schema validation using either OASValidation (REST) or MessageValidation (SOAP/XML).
 
-      if (verbRegex.test(conditionStr)) {
-        hasBodyMethod = true;
-      }
-    }
-  });
-});
+Tested with multiple scenarios:
+- Valid and invalid SOAP MessageValidation configurations
+- REST APIs with and without OASValidation
+- HTTP methods GET, POST, PUT, PATCH
