@@ -1,20 +1,14 @@
 bundle.getProxyEndpoints().forEach(pe => {
   pe.getFlows().forEach(flow => {
 
-    const condition = flow.getCondition() ? flow.getCondition().toString() : "";
+    const condition = flow.getCondition() ? flow.getCondition().toString().toUpperCase() : "";
 
-    if (condition) {
-
-      const bodyMethods = ["POST", "PUT", "PATCH"];
-
-      bodyMethods.forEach(method => {
-
-        if (condition.toUpperCase().includes(method)) {
-          hasBodyMethod = true;
-        }
-
-      });
-
+    if (
+      condition.includes('"POST"') ||
+      condition.includes('"PUT"') ||
+      condition.includes('"PATCH"')
+    ) {
+      hasBodyMethod = true;
     }
 
   });
