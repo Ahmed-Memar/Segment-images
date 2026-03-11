@@ -1,17 +1,20 @@
-bundle.getProxyEndpoints().forEach(pe => {
-  pe.getFlows().forEach(flow => {
+// --- Block 4: Require Element when validating SOAP via WSDL
+// Why: Element restricts validation to a specific SOAP operation.
 
-    const condition = flow.getCondition();
+if (value.startsWith('wsdl://')) {
 
-    if (condition) {
-      const bodyMethods = ["POST", "PUT", "PATCH"];
+  let element = xpath.select('/MessageValidation/Element', el);
 
-      bodyMethods.forEach(method => {
-        if (condition.includes(`request.verb = "${method}"`)) {
-          hasBodyMethod = true;
-        }
-      });
-    }
+  if (element.length === 0) {
 
-  });
-});
+    policy.addMessage({
+      plugin: plugin,
+      line: resource[0].lineNumber,
+      column: resource[0].columnNumber,
+      message:
+        'Missing required "Element" in MessageValidation policy "' + policy.getName() +
+        '" when using WSDL. Element is required to restrict validation to a specific SOAP operation.'
+    });
+
+  }
+}
