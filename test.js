@@ -1,15 +1,14 @@
 bundle.getProxyEndpoints().forEach(pe => {
   pe.getFlows().forEach(flow => {
+    const condition = flow.getCondition();
 
-    const condition = flow.getCondition() ? flow.getCondition().toString().toUpperCase() : "";
+    if (condition) {
+      const conditionStr = condition.getExpression() || "";
+      const verbRegex = /request\.verb\s*(?:=|==)\s*['"]?(POST|PUT|PATCH)['"]?/i;
 
-    if (
-      condition.includes('"POST"') ||
-      condition.includes('"PUT"') ||
-      condition.includes('"PATCH"')
-    ) {
-      hasBodyMethod = true;
+      if (verbRegex.test(conditionStr)) {
+        hasBodyMethod = true;
+      }
     }
-
   });
 });
