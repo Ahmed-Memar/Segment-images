@@ -1,9 +1,33 @@
-Add two custom ApigeeLint plugins for Data Schema Control security requirement.
+// --- Block 3 & 4 merged: Validate SOAPMessage and Element when using WSDL
+// Why: SOAP validation requires SOAPMessage to define version and Element to target operation.
 
-- EX-CS006: Validate SOAP MessageValidation policy configuration (ResourceURL, Element checks).
-- EX-CS007: Ensure APIs accepting request bodies (POST, PUT, PATCH) implement schema validation using either OASValidation (REST) or MessageValidation (SOAP/XML).
+if (value.startsWith('wsdl://')) {
 
-Tested with multiple scenarios:
-- Valid and invalid SOAP MessageValidation configurations
-- REST APIs with and without OASValidation
-- HTTP methods GET, POST, PUT, PATCH
+  let soap = xpath.select('/MessageValidation/SOAPMessage', el);
+  if (soap.length === 0) {
+    compliant = false;
+
+    policy.addMessage({
+      plugin: plugin,
+      line: resource[0].lineNumber,
+      column: resource[0].columnNumber,
+      message:
+        `Missing required element "SOAPMessage" for WSDL validation in policy "${policy.getName()}".`,
+    });
+  }
+
+  let element = xpath.select('/MessageValidation/Element', el);
+  if (element.length === 0) {
+
+    policy.addMessage({
+      plugin: plugin,
+      line: resource[0].lineNumber,
+      column: resource[0].columnNumber,
+      message:
+        'Missing required "Element" in MessageValidation policy "' +
+        policy.getName() +
+        '" when using WSDL.',
+    });
+  }
+
+}
