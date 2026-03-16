@@ -1,4 +1,4 @@
-test 1
+test 4
 
 
 
@@ -11,7 +11,25 @@ test 1
   </PreFlow>
 
   <Flows>
-    <Flow name="DefaultFlow"/>
+
+    <Flow name="GetFlow">
+      <Condition>request.verb = "GET"</Condition>
+    </Flow>
+
+    <Flow name="PostFlow">
+      <Condition>request.verb = "POST"</Condition>
+    </Flow>
+
+    <Flow name="InvalidMethod">
+
+      <Request>
+        <Step>
+          <Name>RF-InvalidMethod</Name>
+        </Step>
+      </Request>
+
+    </Flow>
+
   </Flows>
 
   <HTTPProxyConnection>
@@ -24,14 +42,42 @@ test 1
 </ProxyEndpoint>
 
 
-test 2
+polici RF-InvalidMethod.xml
+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<RaiseFault name="RF-InvalidMethod">
+
+  <FaultResponse>
+    <Set>
+      <StatusCode>405</StatusCode>
+      <ReasonPhrase>Method Not Allowed</ReasonPhrase>
+    </Set>
+  </FaultResponse>
+
+</RaiseFault>
+
+
+
+
+
+test 5
 
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <ProxyEndpoint name="default">
 
   <PreFlow name="PreFlow">
-    <Request/>
+
+    <Request>
+
+      <Step>
+        <Name>RF-InvalidMethod</Name>
+        <Condition>(request.verb != "GET") and (request.verb != "POST")</Condition>
+      </Step>
+
+    </Request>
+
     <Response/>
+
   </PreFlow>
 
   <Flows>
@@ -55,9 +101,21 @@ test 2
 
 </ProxyEndpoint>
 
+policy 5 RF-InvalidMethod.xml
 
-3
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<RaiseFault name="RF-InvalidMethod">
 
+  <FaultResponse>
+    <Set>
+      <StatusCode>405</StatusCode>
+      <ReasonPhrase>Method Not Allowed</ReasonPhrase>
+    </Set>
+  </FaultResponse>
+
+</RaiseFault>
+
+test 6
 
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <ProxyEndpoint name="default">
@@ -69,16 +127,19 @@ test 2
 
   <Flows>
 
+    <Flow name="OptionsFlow">
+      <Condition>request.verb = "OPTIONS"</Condition>
+    </Flow>
+
     <Flow name="GetFlow">
       <Condition>request.verb = "GET"</Condition>
     </Flow>
 
     <Flow name="InvalidMethod">
-      <Condition>request.verb != "GET"</Condition>
 
       <Request>
         <Step>
-          <Name>AM-InvalidMethod</Name>
+          <Name>RF-InvalidMethod</Name>
         </Step>
       </Request>
 
@@ -95,19 +156,16 @@ test 2
 
 </ProxyEndpoint>
 
-
-
 polici
 
-
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<AssignMessage name="AM-InvalidMethod">
+<RaiseFault name="RF-InvalidMethod">
 
-  <Set>
-    <StatusCode>405</StatusCode>
-    <ReasonPhrase>Method Not Allowed</ReasonPhrase>
-  </Set>
+  <FaultResponse>
+    <Set>
+      <StatusCode>405</StatusCode>
+      <ReasonPhrase>Method Not Allowed</ReasonPhrase>
+    </Set>
+  </FaultResponse>
 
-  <AssignTo createNew="false" transport="http" type="response"/>
-
-</AssignMessage>
+</RaiseFault>
