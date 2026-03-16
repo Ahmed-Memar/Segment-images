@@ -1,0 +1,113 @@
+test 1
+
+
+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ProxyEndpoint name="default">
+
+  <PreFlow name="PreFlow">
+    <Request/>
+    <Response/>
+  </PreFlow>
+
+  <Flows>
+    <Flow name="DefaultFlow"/>
+  </Flows>
+
+  <HTTPProxyConnection>
+    <BasePath>/test</BasePath>
+    <VirtualHost>default</VirtualHost>
+  </HTTPProxyConnection>
+
+  <RouteRule name="noroute"/>
+
+</ProxyEndpoint>
+
+
+test 2
+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ProxyEndpoint name="default">
+
+  <PreFlow name="PreFlow">
+    <Request/>
+    <Response/>
+  </PreFlow>
+
+  <Flows>
+
+    <Flow name="GetFlow">
+      <Condition>request.verb = "GET"</Condition>
+    </Flow>
+
+    <Flow name="PostFlow">
+      <Condition>request.verb = "POST"</Condition>
+    </Flow>
+
+  </Flows>
+
+  <HTTPProxyConnection>
+    <BasePath>/test</BasePath>
+    <VirtualHost>default</VirtualHost>
+  </HTTPProxyConnection>
+
+  <RouteRule name="noroute"/>
+
+</ProxyEndpoint>
+
+
+3
+
+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ProxyEndpoint name="default">
+
+  <PreFlow name="PreFlow">
+    <Request/>
+    <Response/>
+  </PreFlow>
+
+  <Flows>
+
+    <Flow name="GetFlow">
+      <Condition>request.verb = "GET"</Condition>
+    </Flow>
+
+    <Flow name="InvalidMethod">
+      <Condition>request.verb != "GET"</Condition>
+
+      <Request>
+        <Step>
+          <Name>AM-InvalidMethod</Name>
+        </Step>
+      </Request>
+
+    </Flow>
+
+  </Flows>
+
+  <HTTPProxyConnection>
+    <BasePath>/test</BasePath>
+    <VirtualHost>default</VirtualHost>
+  </HTTPProxyConnection>
+
+  <RouteRule name="noroute"/>
+
+</ProxyEndpoint>
+
+
+
+polici
+
+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<AssignMessage name="AM-InvalidMethod">
+
+  <Set>
+    <StatusCode>405</StatusCode>
+    <ReasonPhrase>Method Not Allowed</ReasonPhrase>
+  </Set>
+
+  <AssignTo createNew="false" transport="http" type="response"/>
+
+</AssignMessage>
