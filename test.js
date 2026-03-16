@@ -1,129 +1,114 @@
-Security Requirement
+const ruleId = 'EX-CS008';
 
-Data Schema Control
+const debug = require('debug')('apigeelint:' + ruleId);
+const SecurityLib = require('./security-lib.js');
 
-Description
+const plugin = {
+  ruleId: ruleId,
+  name: "Check HTTP Methods Control",
+  message: "Checks if HTTP methods are explicitly controlled and unsupported methods are rejected",
+  fatal: false,
+  severity: 2,
+  nodeType: "Bundle",
+  enabled: true,
+};
 
-Incoming request payloads must be validated against a defined schema (JSON or XML) to ensure that the data structure matches the expected format and to prevent malformed inputs or injection attacks.
+const warningPlugin = JSON.parse(JSON.stringify(plugin));
+warningPlugin.severity = 1;
 
+const onProxyEndpoint = function (endpoint, cb) {
 
----
+  debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
 
-Evaluation
+  let flows = endpoint.getFlows();
+  let hasVerbCondition = false;
+  let hasCatchAllRaiseFault = false;
 
-The API proxy must validate incoming request payloads against a defined schema.
+  flows.forEach((flow, index) => {
 
-This validation ensures:
+    const condition = flow.getCondition();
 
-payload structure integrity
+    if (condition && condition.includes('request.verb')) {
+      hasVerbCondition = true;
+    }
 
-correct field types
+    // catch-all flow = no condition
+    if (!condition) {
 
-prevention of malformed or unexpected data
+      const steps = flow.getRequestSteps().concat(flow.getResponseSteps());
 
+      steps.forEach(step => {
 
+        if (step.getName && step.getName().includes('RaiseFault')) {
+          hasCatchAllRaiseFault = true;
+        }
 
----
+      });
+    }
 
-Applicable Policies
+  });
 
-Policy	API Type
+  // --- Error: no HTTP method control
 
-OASValidation	REST / JSON APIs
-MessageValidation	SOAP / XML APIs
+  if (!hasVerbCondition) {
 
+    endpoint.addMessage({
+      plugin: plugin,
+      line: endpoint.lineNumber,
+      column: endpoint.columnNumber,
+      message:
+        `No HTTP method control detected. ` +
+        `Proxy does not check "request.verb".`,
+    });
 
+  }
 
----
+  // --- Error: missing catch-all rejection
 
-Policy Implementation
+  if (hasVerbCondition && !hasCatchAllRaiseFault) {
 
-OASValidation (REST APIs)
+    endpoint.addMessage({
+      plugin: plugin,
+      line: endpoint.lineNumber,
+      column: endpoint.columnNumber,
+      message:
+        `HTTP methods may fall through to backend. ` +
+        `Missing catch-all flow with RaiseFault to reject unsupported methods.`,
+    });
 
-Purpose
+  }
 
-Validate JSON request payload against an OpenAPI schema.
+  // --- Warning: AssignMessage used instead of RaiseFault
 
-Configuration Requirements
+  flows.forEach(flow => {
 
-Parameter	Required Value	Severity
+    const steps = flow.getRequestSteps().concat(flow.getResponseSteps());
 
-ValidateMessageBody	true	Error
-AllowUnspecifiedParameters (Query)	false	Error
-AllowUnspecifiedParameters (Cookie)	false	Warning
+    steps.forEach(step => {
 
+      if (step.getName && step.getName().includes('AssignMessage')) {
 
-Design Decisions
+        endpoint.addMessage({
+          plugin: warningPlugin,
+          line: endpoint.lineNumber,
+          column: endpoint.columnNumber,
+          message:
+            `AssignMessage used for method control without RaiseFault. ` +
+            `AssignMessage alone may not terminate the request.`,
+        });
 
-ValidateMessageBody must be enabled to ensure the request body is validated against the OpenAPI schema.
+      }
 
-AllowUnspecifiedParameters (Query) must be set to false so that only declared query parameters are accepted.
+    });
 
-AllowUnspecifiedParameters (Cookie) is treated as a warning because cookies may be added automatically by browsers or infrastructure components.
+  });
 
-Headers are ignored in OASValidation checks because infrastructure components may inject additional headers.
+  if (typeof cb === 'function') {
+    cb();
+  }
+};
 
-
-Lint Rule
-
-EX-CS005 — OASValidation Configuration Check
-
-
----
-
-MessageValidation (SOAP APIs)
-
-Purpose
-
-Validate SOAP/XML payload against a WSDL or XSD schema.
-
-Configuration Requirements
-
-Parameter	Requirement
-
-ResourceURL	must reference WSDL or XSD
-SOAPMessage	required
-Element	required when using WSDL
-
-
-Design Decisions
-
-ResourceURL must point to a valid WSDL or XSD so the payload can be validated against a schema.
-
-SOAPMessage is required to validate the SOAP envelope content.
-
-Element is required when using WSDL to identify the element or operation to validate.
-
-
-Lint Rule
-
-EX-CS006 — SOAP MessageValidation Configuration Check
-
-
----
-
-Data Schema Validation – Global Rule
-
-This rule ensures that APIs requiring payload validation implement at least one schema validation policy.
-
-Rule Logic
-
-For APIs receiving request bodies, at least one of the following policies must be implemented:
-
-OASValidation
-
-MessageValidation
-
-
-SOAP-Specific Condition
-
-For SOAP APIs, if the request does not contain a body, the validation check is skipped.
-
-Design Decision
-
-SOAP requests without payload are excluded because schema validation only applies when a request body is present.
-
-
-Lint Rule
-
-EX-CS007 — Data Schema Validation Global Check
+module.exports = {
+  plugin,
+  onProxyEndpoint,
+};
