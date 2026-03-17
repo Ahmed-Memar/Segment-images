@@ -1,26 +1,22 @@
 if (!hasVerbCondition) {
-
   endpoint.addMessage({
-    plugin,
+    plugin: plugin,
+    line: endpoint.lineNumber,
+    column: endpoint.columnNumber,
     message: 'No HTTP method control detected. Proxy does not check "request.verb".'
   });
-
+} else if (hasAssignMessage && !hasCatchAllRaiseFault) {
+  endpoint.addMessage({
+    plugin: warningPlugin,
+    line: endpoint.lineNumber,
+    column: endpoint.columnNumber,
+    message: 'AssignMessage used for method control without RaiseFault. AssignMessage alone may not terminate the request.'
+  });
 } else if (!hasCatchAllRaiseFault) {
-
-  if (hasAssignMessage) {
-
-    endpoint.addMessage({
-      plugin: warningPlugin,
-      message: 'AssignMessage used without RaiseFault for method control.'
-    });
-
-  } else {
-
-    endpoint.addMessage({
-      plugin,
-      message: 'HTTP methods may fall through to backend. Missing catch-all flow with RaiseFault.'
-    });
-
-  }
-
+  endpoint.addMessage({
+    plugin: plugin,
+    line: endpoint.lineNumber,
+    column: endpoint.columnNumber,
+    message: 'HTTP methods may fall through to backend. Missing catch-all flow with RaiseFault.'
+  });
 }
