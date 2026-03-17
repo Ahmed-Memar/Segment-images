@@ -3,22 +3,25 @@ flows.forEach((flow) => {
   const conditionObj = flow.getCondition();
   const condition = conditionObj ? conditionObj.getExpression() : "";
 
+  // ✅ détecter request.verb
   if (condition.includes('request.verb')) {
     hasVerbCondition = true;
   }
 
-  // catch-all = pas de condition
-  if (!condition) {
+  const steps = flow.steps || [];
 
-    const steps = flow.steps || [];
+  steps.forEach(step => {
 
-    steps.forEach(step => {
+    // ✅ detect RaiseFault (catch-all)
+    if (!condition && step.name && step.name.toLowerCase().includes('rf-')) {
+      hasCatchAllRaiseFault = true;
+    }
 
-      if (step.name && step.name.includes('RF-')) {
-        hasCatchAllRaiseFault = true;
-      }
+    // ✅ detect AssignMessage
+    if (step.name && step.name.toLowerCase().includes('assignmessage')) {
+      hasAssignMessage = true;
+    }
 
-    });
-  }
+  });
 
 });
