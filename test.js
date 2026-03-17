@@ -1,50 +1,22 @@
-// Detect global RaiseFault (PreFlow)
-const preFlow = endpoint.getPreFlow();
-
-if (preFlow) {
-  const el = preFlow.getElement();
-  const stepNodes = xpath.select('./Request/Step/Name | ./Response/Step/Name', el);
-
-  stepNodes.forEach((node) => {
-    const stepName = (node.firstChild && node.firstChild.data ? node.firstChild.data : "")
-      .trim()
-      .toLowerCase();
-
-    if (stepName.startsWith('rf-')) {
-      hasGlobalRaiseFault = true;
-    }
+if (!hasVerbCondition) {
+  endpoint.addMessage({
+    plugin: plugin,
+    line: endpoint.lineNumber,
+    column: endpoint.columnNumber,
+    message: 'No HTTP method control detected. Proxy does not check "request.verb".'
+  });
+} else if (hasAssignMessage && !(hasCatchAllRaiseFault || hasGlobalRaiseFault)) {
+  endpoint.addMessage({
+    plugin: warningPlugin,
+    line: endpoint.lineNumber,
+    column: endpoint.columnNumber,
+    message: 'AssignMessage used for method control without RaiseFault. AssignMessage alone may not terminate the request.'
+  });
+} else if (!(hasCatchAllRaiseFault || hasGlobalRaiseFault)) {
+  endpoint.addMessage({
+    plugin: plugin,
+    line: endpoint.lineNumber,
+    column: endpoint.columnNumber,
+    message: 'HTTP methods may fall through to backend. Missing catch-all flow with RaiseFault.'
   });
 }
-
-// Analyse des flows
-flows.forEach((flow) => {
-
-  const conditionObj = flow.getCondition();
-  const condition = conditionObj ? conditionObj.getExpression() : "";
-
-  // détecter request.verb
-  if (condition.includes('request.verb')) {
-    hasVerbCondition = true;
-  }
-
-  // récupérer les steps depuis XML
-  const el = flow.getElement();
-  const stepNodes = xpath.select('./Request/Step/Name | ./Response/Step/Name', el);
-
-  stepNodes.forEach((node) => {
-    const stepName = (node.firstChild && node.firstChild.data ? node.firstChild.data : "")
-      .trim()
-      .toLowerCase();
-
-    // detect RaiseFault
-    if (stepName.startsWith('rf-')) {
-      hasCatchAllRaiseFault = true;
-    }
-
-    // detect AssignMessage
-    if (stepName.startsWith('am-')) {
-      hasAssignMessage = true;
-    }
-  });
-
-});
