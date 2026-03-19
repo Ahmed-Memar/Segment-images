@@ -1,171 +1,271 @@
-test 4
+test-methods-01-rest-skip
+default.xml
 
-
-
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <ProxyEndpoint name="default">
-
   <PreFlow name="PreFlow">
-    <Request/>
+    <Request>
+      <Step>
+        <Name>OAS-Validation</Name>
+      </Step>
+    </Request>
+    <Response/>
+  </PreFlow>
+
+  <HTTPProxyConnection>
+    <BasePath>/test</BasePath>
+    <VirtualHost>default</VirtualHost>
+  </HTTPProxyConnection>
+</ProxyEndpoint>
+
+
+policies/OAS-Validation.xml
+
+
+<OASValidation name="OAS-Validation">
+  <Source>request</Source>
+</OASValidation>
+
+
+
+
+
+test-methods-02-soap-no-control
+default.xml
+
+
+<ProxyEndpoint name="default">
+  <PreFlow name="PreFlow">
+    <Request>
+      <Step>
+        <Name>MV-ValidateXML</Name>
+      </Step>
+    </Request>
+    <Response/>
+  </PreFlow>
+
+  <HTTPProxyConnection>
+    <BasePath>/test</BasePath>
+    <VirtualHost>default</VirtualHost>
+  </HTTPProxyConnection>
+</ProxyEndpoint>
+
+
+policies/MV-ValidateXML.xml
+
+
+<MessageValidation name="MV-ValidateXML">
+  <Source>request</Source>
+  <ResourceURL>wsdl://test.wsdl</ResourceURL>
+  <SOAPMessage version="1.1"/>
+</MessageValidation>
+
+
+
+
+
+
+
+test-methods-03-soap-no-raisefault
+default.xml
+
+
+<ProxyEndpoint name="default">
+  <PreFlow name="PreFlow">
+    <Request>
+      <Step>
+        <Name>MV-ValidateXML</Name>
+      </Step>
+    </Request>
     <Response/>
   </PreFlow>
 
   <Flows>
-
-    <Flow name="GetFlow">
-      <Condition>request.verb = "GET"</Condition>
-    </Flow>
-
-    <Flow name="PostFlow">
+    <Flow name="OnlyPost">
       <Condition>request.verb = "POST"</Condition>
     </Flow>
-
-    <Flow name="InvalidMethod">
-
-      <Request>
-        <Step>
-          <Name>RF-InvalidMethod</Name>
-        </Step>
-      </Request>
-
-    </Flow>
-
   </Flows>
 
   <HTTPProxyConnection>
     <BasePath>/test</BasePath>
     <VirtualHost>default</VirtualHost>
   </HTTPProxyConnection>
-
-  <RouteRule name="noroute"/>
-
 </ProxyEndpoint>
 
 
-polici RF-InvalidMethod.xml
-
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<RaiseFault name="RF-InvalidMethod">
-
-  <FaultResponse>
-    <Set>
-      <StatusCode>405</StatusCode>
-      <ReasonPhrase>Method Not Allowed</ReasonPhrase>
-    </Set>
-  </FaultResponse>
-
-</RaiseFault>
 
 
+test-methods-04-soap-valid
+default.xml
 
 
-
-test 5
-
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <ProxyEndpoint name="default">
-
   <PreFlow name="PreFlow">
-
     <Request>
-
       <Step>
+        <Condition>request.verb != "POST"</Condition>
         <Name>RF-InvalidMethod</Name>
-        <Condition>(request.verb != "GET") and (request.verb != "POST")</Condition>
       </Step>
 
+      <Step>
+        <Name>MV-ValidateXML</Name>
+      </Step>
     </Request>
-
     <Response/>
-
   </PreFlow>
-
-  <Flows>
-
-    <Flow name="GetFlow">
-      <Condition>request.verb = "GET"</Condition>
-    </Flow>
-
-    <Flow name="PostFlow">
-      <Condition>request.verb = "POST"</Condition>
-    </Flow>
-
-  </Flows>
 
   <HTTPProxyConnection>
     <BasePath>/test</BasePath>
     <VirtualHost>default</VirtualHost>
   </HTTPProxyConnection>
-
-  <RouteRule name="noroute"/>
-
 </ProxyEndpoint>
 
-policy 5 RF-InvalidMethod.xml
 
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+policies/RF-InvalidMethod.xml
+
 <RaiseFault name="RF-InvalidMethod">
-
   <FaultResponse>
     <Set>
       <StatusCode>405</StatusCode>
-      <ReasonPhrase>Method Not Allowed</ReasonPhrase>
     </Set>
   </FaultResponse>
-
 </RaiseFault>
 
-test 6
 
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+test-methods-05-sharedflow-warning
+default.xml
+
+
 <ProxyEndpoint name="default">
-
   <PreFlow name="PreFlow">
-    <Request/>
+    <Request>
+      <Step>
+        <Name>FC-SecurityFlow</Name>
+      </Step>
+
+      <Step>
+        <Name>MV-ValidateXML</Name>
+      </Step>
+    </Request>
+    <Response/>
+  </PreFlow>
+
+  <HTTPProxyConnection>
+    <BasePath>/test</BasePath>
+    <VirtualHost>default</VirtualHost>
+  </HTTPProxyConnection>
+</ProxyEndpoint>
+
+
+
+policies/FC-SecurityFlow.xml
+
+
+<FlowCallout name="FC-SecurityFlow"/>
+
+
+
+
+
+
+test-methods-06-flow-level-warning
+default.xml
+
+
+<ProxyEndpoint name="default">
+  <PreFlow name="PreFlow">
+    <Request>
+      <Step>
+        <Name>MV-ValidateXML</Name>
+      </Step>
+    </Request>
     <Response/>
   </PreFlow>
 
   <Flows>
-
-    <Flow name="OptionsFlow">
-      <Condition>request.verb = "OPTIONS"</Condition>
-    </Flow>
-
-    <Flow name="GetFlow">
-      <Condition>request.verb = "GET"</Condition>
-    </Flow>
-
-    <Flow name="InvalidMethod">
-
+    <Flow name="BlockMethods">
+      <Condition>request.verb != "POST"</Condition>
       <Request>
         <Step>
           <Name>RF-InvalidMethod</Name>
         </Step>
       </Request>
-
     </Flow>
-
   </Flows>
 
   <HTTPProxyConnection>
     <BasePath>/test</BasePath>
     <VirtualHost>default</VirtualHost>
-  </HTTPProxyConnection>
-
-  <RouteRule name="noroute"/>
-
+</HTTPProxyConnection>
 </ProxyEndpoint>
 
-polici
 
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<RaiseFault name="RF-InvalidMethod">
 
-  <FaultResponse>
-    <Set>
-      <StatusCode>405</StatusCode>
-      <ReasonPhrase>Method Not Allowed</ReasonPhrase>
-    </Set>
-  </FaultResponse>
 
-</RaiseFault>
+test-methods-07-get-wsdl-warning
+default.xml
+
+
+<ProxyEndpoint name="default">
+  <PreFlow name="PreFlow">
+    <Request>
+      <Step>
+        <Condition>(request.verb = "GET") and (request.queryparam.wsdl != null)</Condition>
+        <Name>SomeStep</Name>
+      </Step>
+
+      <Step>
+        <Condition>request.verb != "POST"</Condition>
+        <Name>RF-InvalidMethod</Name>
+      </Step>
+
+      <Step>
+        <Name>MV-ValidateXML</Name>
+      </Step>
+    </Request>
+    <Response/>
+  </PreFlow>
+
+  <HTTPProxyConnection>
+    <BasePath>/test</BasePath>
+    <VirtualHost>default</VirtualHost>
+  </HTTPProxyConnection>
+</ProxyEndpoint>
+
+
+
+test-methods-08-get-wsdl-pass
+default.xml
+
+
+
+<ProxyEndpoint name="default">
+  <Description>apigeelit:allow-method:GET:wsdl</Description>
+
+  <PreFlow name="PreFlow">
+    <Request>
+      <Step>
+        <Condition>(request.verb = "GET") and (request.queryparam.wsdl != null)</Condition>
+        <Name>AllowWSDL</Name>
+      </Step>
+
+      <Step>
+        <Condition>request.verb != "POST"</Condition>
+        <Name>RF-InvalidMethod</Name>
+      </Step>
+
+      <Step>
+        <Name>MV-ValidateXML</Name>
+      </Step>
+    </Request>
+    <Response/>
+  </PreFlow>
+
+  <HTTPProxyConnection>
+    <BasePath>/test</BasePath>
+    <VirtualHost>default</VirtualHost>
+  </HTTPProxyConnection>
+</ProxyEndpoint>
+
+
+
