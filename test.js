@@ -1,12 +1,38 @@
-const getPoliciesByType = function (endpoint, type) {
-  const policies = endpoint.parent.getPolicies();
+const preFlowSteps = xpath.select('/ProxyEndpoint/PreFlow/Request/Step', proxyEl);
 
-  policies.forEach(p => {
-    console.log("DEBUG POLICY →", p.getName(), p.getType());
-  });
+for (let i = 0; i < preFlowSteps.length; i++) {
+  const step = preFlowSteps[i];
 
-  return policies.filter(p => p.getType() === type);
-};
+  const conditionNode = xpath.select('Condition', step)[0];
+  const nameNode = xpath.select('Name', step)[0];
+
+  const condition = (conditionNode && conditionNode.firstChild)
+    ? conditionNode.firstChild.data.trim()
+    : '';
+
+  const stepName = (nameNode && nameNode.firstChild)
+    ? nameNode.firstChild.data.trim()
+    : '';
+
+  if (conditionHasRequestVerb(condition)) {
+    foundVerbCheck = true;
+    foundPreFlowGuard = true;
+
+    if (isRaiseFaultPolicyName(endpoint, stepName)) {
+      foundRaiseFault = true;
+    }
+
+    if (conditionLooksLikeWsdlGetException(condition)) {
+      foundWsdlGetException = true;
+    }
+  }
+
+  if (isFlowCalloutPolicyName(endpoint, stepName)) {
+    foundSharedFlowDelegation = true;
+  }
+}
+
+
 
 
 const getPoliciesByType = function (endpoint, type) {
