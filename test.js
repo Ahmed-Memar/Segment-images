@@ -1,65 +1,47 @@
-// FAIL: no request.verb at all
-if (!foundVerbCheck) {
-  endpoint.addMessage({
-    plugin: plugin,
-    line: proxyLine,
-    column: proxyColumn,
-    message:
-      'SOAP API does not implement explicit HTTP method control. ' +
-      'No condition referencing "request.verb" was found.'
-  });
+<Flows>
 
-  if (typeof cb === 'function') {
-    cb(null, true);
-  }
-  return;
-}
+  <!-- Flow protégé -->
+  <Flow name="BlockMethods">
+    <Condition>request.verb != "POST"</Condition>
+    <Request>
+      <Step>
+        <Name>RF-InvalidMethod</Name>
+      </Step>
+    </Request>
+  </Flow>
 
-// FAIL: request.verb but no RaiseFault
-if (!foundRaiseFault) {
-  endpoint.addMessage({
-    plugin: plugin,
-    line: proxyLine,
-    column: proxyColumn,
-    message:
-      'HTTP method check detected for SOAP API, but no RaiseFault policy was found. ' +
-      'Unsupported methods may reach backend.'
-  });
+  <!-- Flow NON protégé -->
+  <Flow name="NoProtection">
+    <Condition>request.verb = "POST"</Condition>
+    <Request>
+      <Step>
+        <Name>SomePolicy</Name>
+      </Step>
+    </Request>
+  </Flow>
 
-  if (typeof cb === 'function') {
-    cb(null, true);
-  }
-  return;
-}
+</Flows>
 
-// ✅ NEW LOGIC
 
-// If PreFlow is protected → PASS
-if (foundPreFlowGuard && foundRaiseFault) {
-  if (typeof cb === 'function') {
-    cb(null, false);
-  }
-  return;
-}
 
-// Otherwise → all flows must be protected
-if (!allFlowsProtected) {
-  endpoint.addMessage({
-    plugin: plugin,
-    line: proxyLine,
-    column: proxyColumn,
-    message:
-      'HTTP method control is not consistently applied across all flows. ' +
-      'Each flow must validate request.verb and reject invalid methods.'
-  });
+<Flows>
 
-  if (typeof cb === 'function') {
-    cb(null, true);
-  }
-  return;
-}
+  <Flow name="Flow1">
+    <Condition>request.verb != "POST"</Condition>
+    <Request>
+      <Step>
+        <Name>RF-InvalidMethod</Name>
+      </Step>
+    </Request>
+  </Flow>
 
-// PASS
-if (typeof cb === 'function') {
-  cb(null, false);
-}
+  <Flow name="Flow2">
+    <Condition>request.verb != "POST"</Condition>
+    <Request>
+      <Step>
+        <Name>RF-InvalidMethod</Name>
+      </Step>
+    </Request>
+  </Flow>
+
+</Flows>
