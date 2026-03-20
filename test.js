@@ -1,38 +1,65 @@
-const flows = xpath.select('/ProxyEndpoint/Flows/Flow', proxyEl);
+// FAIL: no request.verb at all
+if (!foundVerbCheck) {
+  endpoint.addMessage({
+    plugin: plugin,
+    line: proxyLine,
+    column: proxyColumn,
+    message:
+      'SOAP API does not implement explicit HTTP method control. ' +
+      'No condition referencing "request.verb" was found.'
+  });
 
-for (let i = 0; i < flows.length; i++) {
-  const flow = flows[i];
-
-  const conditionNode = xpath.select('Condition', flow)[0];
-  const condition = (conditionNode && conditionNode.firstChild)
-    ? conditionNode.firstChild.data.trim()
-    : '';
-
-  let flowHasVerbCheck = false;
-
-  if (conditionHasRequestVerb(condition)) {
-    flowHasVerbCheck = true;
-    foundVerbCheck = true;
+  if (typeof cb === 'function') {
+    cb(null, true);
   }
+  return;
+}
 
-  // Check RaiseFault in steps
-  const stepNames = xpath.select('Request/Step/Name', flow);
+// FAIL: request.verb but no RaiseFault
+if (!foundRaiseFault) {
+  endpoint.addMessage({
+    plugin: plugin,
+    line: proxyLine,
+    column: proxyColumn,
+    message:
+      'HTTP method check detected for SOAP API, but no RaiseFault policy was found. ' +
+      'Unsupported methods may reach backend.'
+  });
 
-  let flowHasRaiseFault = false;
-
-  for (let j = 0; j < stepNames.length; j++) {
-    const stepName = stepNames[j].firstChild
-      ? stepNames[j].firstChild.data.trim()
-      : '';
-
-    if (isRaiseFaultPolicyName(endpoint, stepName)) {
-      flowHasRaiseFault = true;
-      foundRaiseFault = true;
-    }
+  if (typeof cb === 'function') {
+    cb(null, true);
   }
+  return;
+}
 
-  // ❗ IMPORTANT
-  if (!(flowHasVerbCheck && flowHasRaiseFault)) {
-    allFlowsProtected = false;
+// ✅ NEW LOGIC
+
+// If PreFlow is protected → PASS
+if (foundPreFlowGuard && foundRaiseFault) {
+  if (typeof cb === 'function') {
+    cb(null, false);
   }
+  return;
+}
+
+// Otherwise → all flows must be protected
+if (!allFlowsProtected) {
+  endpoint.addMessage({
+    plugin: plugin,
+    line: proxyLine,
+    column: proxyColumn,
+    message:
+      'HTTP method control is not consistently applied across all flows. ' +
+      'Each flow must validate request.verb and reject invalid methods.'
+  });
+
+  if (typeof cb === 'function') {
+    cb(null, true);
+  }
+  return;
+}
+
+// PASS
+if (typeof cb === 'function') {
+  cb(null, false);
 }
