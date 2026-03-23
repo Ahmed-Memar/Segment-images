@@ -1,55 +1,5 @@
-START
-  │
-  ▼
-[REST ? (OASValidation)]
-  │
-  └── YES → ✅ PASS (skip)
+Add a new ApigeeLint plugin to enforce HTTP method control on SOAP APIs.
 
-  │
-  ▼
-[SOAP ? (MessageValidation)]
-  │
-  └── YES → 🔍 vérifier HTTP methods
-
-────────────────────────
-
-[CAS SOAP]
-
-  │
-  ▼
-request.verb présent ?
-  │
-  ├── NO → ❌ ERROR
-  │
-  └── YES
-         │
-         ▼
-RaiseFault lié ?
-         │
-         ├── NO → ❌ ERROR
-         │
-         └── YES
-                │
-                ▼
-Position PreFlow ?
-                │
-                ├── YES → ✔️ OK
-                │
-                └── NO → ⚠️ WARNING
-
-────────────────────────
-
-[GET + ?wsdl détecté ?]
-  │
-  ├── NO → (rien, normal)
-  │
-  └── YES
-         │
-         ▼
-Annotation présente ?
-         │
-         ├── YES → ✅ PASS
-         │
-         └── NO → ⚠️ WARNING
-
-END
+- Detects missing request.verb checks
+- Ensures RaiseFault is used to block invalid methods
+- Supports WSDL GET exception (?wsdl)
