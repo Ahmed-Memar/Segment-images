@@ -1,8 +1,5 @@
-🌟 Pleased to share my latest project on computer vision using artificial intelligence! 🌟
+J’ai travaillé sur des plugins ApigeeLint pour automatiser des contrôles de sécurité.
 
-In this project, I developed a system to segment images, preparing them for subsequent enhancement. Using Python in JupyterLab, I focused on accurately dividing images into meaningful parts to facilitate later improvements.
+D’abord, j’ai implémenté l’exigence de Data Schema Control, en utilisant OASValidation pour les APIs REST et MessageValidation pour les APIs SOAP, avec un plugin global pour vérifier la bonne configuration.
 
-🔍 Project Highlights:
-Image Segmentation: Dividing images into segments for further enhancement.
-Tools Used: Python and JupyterLab for implementation.
-This project has significantly enhanced my skills in computer vision and AI. Stay tuned for an example image demonstrating the segmentation process!
+Ensuite, je travaille actuellement sur un plugin de contrôle des méthodes HTTP pour les APIs SOAP, afin de s’assurer que seules les méthodes autorisées sont acceptées et que les autres sont correctement bloquées.
