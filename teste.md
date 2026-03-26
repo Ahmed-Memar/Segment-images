@@ -1,109 +1,13 @@
-# Security Requirement
+Au début, j’ai d’abord collecté les exigences de sécurité, puis je les ai analysées pour voir ce qu’on pouvait vérifier directement à partir du bundle et automatiser. Ensuite, j’ai fait le mapping entre les exigences et les policies Apigee correspondantes, ce qui m’a permis de construire une base solide pour travailler.
+Après ça, je suis passé à l’implémentation des plugins. J’ai commencé par l’exigence de validation de schéma, avec trois plugins : OASValidation, MessageValidation et un plugin global.
+Et actuellement, je suis presque à la fin de la deuxième exigence, qui est le contrôle des méthodes HTTP.
 
-## HTTP Method Control
 
-### Description
+🔹 Question 1 (top)
+Est-ce que vous avez déjà des contrôles de sécurité automatisés dans votre pipeline aujourd’hui ?
 
-APIs must restrict allowed HTTP methods and reject unsupported methods to prevent misuse and unintended access.
+🔹 Question 2
+À quel moment du pipeline vous pensez intégrer apigeelint ? Avant build ou avant déploiement ?
 
----
-
-### Evaluation
-
-The API proxy must enforce HTTP method restrictions to ensure that only authorized methods are accepted.
-
----
-
-### Applicable Policies
-
-| Policy | API Type |
-|---|---|
-| RaiseFault + Flow Conditions | SOAP / XML APIs |
-
----
-
-# Policy Implementation
-
-## HTTP Method Control (SOAP APIs)
-
-### Purpose
-
-Ensure that only allowed HTTP methods (typically POST for SOAP APIs) are accepted.
-
----
-
-### Configuration Requirements
-
-| Requirement | Description |
-|---|---|
-| request.verb condition | must restrict allowed HTTP methods |
-| RaiseFault policy | must block unauthorized methods |
-
-#### Design Decisions
-
-- Only **SOAP APIs** are evaluated (REST APIs are covered by OASValidation).  
-- **request.verb** must be explicitly used to enforce allowed methods.  
-- **RaiseFault** ensures that invalid methods are actively rejected.  
-
----
-
-### Rule Logic
-
-The plugin evaluates the ProxyEndpoint as follows:
-
-#### 1. API Filtering
-
-- Ignore REST APIs covered by OASValidation  
-- Evaluate only SOAP APIs (detected via MessageValidation)  
-
----
-
-#### 2. Method Control Validation
-
-The following conditions must be met:
-
-- `request.verb` must be used to validate allowed HTTP methods  
-- A RaiseFault policy must be used to reject unauthorized methods  
-
----
-
-#### 3. Protection Coverage
-
-HTTP method control must be applied in one of the following ways:
-
-**PreFlow Protection**
-
-- Method control implemented in PreFlow  
-- Considered sufficient for the entire API  
-
----
-
-**Flow-Level Protection**
-
-If no PreFlow protection is present:
-
-- Each Flow must include:  
-  - a `request.verb` condition  
-  - a RaiseFault policy  
-
----
-
-### Exception Handling
-
-GET requests are allowed only for WSDL/XSD retrieval:
-
-| Case | Description |
-|---|---|
-| WSDL access | `request.queryparam.wsdl` or `.wsdl` in path |
-| XSD access | `request.queryparam.xsd` |
-
-#### Design Decisions
-
-- WSDL/XSD retrieval requires GET and is valid  
-- These flows are excluded from validation to avoid false positives  
-
----
-
-### Lint Rule
-
-**EX-CS008 — HTTP Method Control Check**
+🔹 Question 3 (bonus)
+Est-ce que vous utilisez des shared flows pour la sécurité ?
