@@ -70,3 +70,25 @@ if (invalidFlows.length > 0) {
 }
 
 return cb(null, false);
+
+
+
+
+
+
+
+
+const flows = getFlows(endpoint);
+
+// aucun contrôle nulle part
+if (flows.length === 0) {
+  endpoint.addMessage({
+    plugin,
+    line,
+    column,
+    message:
+      'SOAP API does not implement HTTP method control. No PreFlow or Flow enforces request.verb and RaiseFault.'
+  });
+
+  return cb(null, true);
+}
