@@ -1,53 +1,12 @@
-const invalidFlows = findFlowsNotMatching(endpoint, (steps, flow) => {
+invalidFlows.forEach(flow => {
 
-    const condition = getCondition(flow);
-    const hasVerb = requestVerbRegex.test(condition);
+    const messages = flow.details.map(d => d.message);
 
-    let hasRF = false;
-
-    steps.forEach(step => {
-        const stepName = getStepName(step);
-
-        if (isRaiseFaultPolicyUsed(endpoint, stepName)) {
-            hasRF = true;
-        }
+    endpoint.addMessage({
+        plugin,
+        line: flow.line,
+        column: flow.column,
+        message: `Flow "${flow.name}" - ${messages.join(' AND ')}`
     });
 
-    let details = [];
-
-    if (!hasVerb) {
-        details.push({
-            message: 'missing request.verb condition',
-            line: flow.lineNumber,
-            column: flow.columnNumber
-        });
-    }
-
-    if (!hasRF) {
-        details.push({
-            message: 'missing RaiseFault policy',
-            line: flow.lineNumber,
-            column: flow.columnNumber
-        });
-    }
-
-    return {
-        isValid: hasVerb && hasRF,
-        details
-    };
 });
-
-
-
-
-
-
-
-
-
-if (invalidFlows.length > 0) {
-    ...
-    return cb(null, true);
-}
-
-return cb(null, false);
