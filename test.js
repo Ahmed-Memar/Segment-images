@@ -1,40 +1,25 @@
-const steps = getPreFlowRequestSteps(endpoint);
+const findFlowsNotMatching = (endpoint, matcherFn) => {
+    const flows = getFlows(endpoint);
+    const invalidFlows = [];
 
+    flows.forEach(flow => {
+        const flowName = flow.getAttribute('name') || 'UnnamedFlow';
+        const flowLine = flow.lineNumber;
+        const flowColumn = flow.columnNumber;
 
-steps.forEach(step => {
-    const stepName = getStepName(step);
-    ...
-});
+        const steps = getFlowRequestSteps(flow);
 
+        const result = matcherFn(steps, flow);
 
+        if (!result.isValid) {
+            invalidFlows.push({
+                name: flowName,
+                line: flowLine,
+                column: flowColumn,
+                details: result.details
+            });
+        }
+    });
 
-
-const invalidFlows = findFlowsNotMatching(endpoint, (stepName) => {
-    return isRequestVerbCheck(stepName) && hasRaiseFault(stepName);
-});
-
-
-
-const invalidFlows = findFlowsNotMatching(endpoint, (stepName, step, flow) => {
-
-    const condition = getCondition(flow);
-
-    const hasVerb = requestVerbRegex.test(condition);
-    const hasRF = isRaiseFaultPolicy(stepName);
-
-    return hasVerb && hasRF;
-});
-
-
-
-
-const steps = getFlowRequestSteps(flow);
-
-steps.forEach(step => {
-    const stepName = getStepName(step);
-});
-
-
-
-
-
+    return invalidFlows;
+};
