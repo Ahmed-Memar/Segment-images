@@ -1,25 +1,44 @@
-const findFlowsNotMatching = (endpoint, matcherFn) => {
-    const flows = getFlows(endpoint);
-    const invalidFlows = [];
+const invalidFlows = findFlowsNotMatching(endpoint, (steps, flow) => {
 
-    flows.forEach(flow => {
-        const flowName = flow.getAttribute('name') || 'UnnamedFlow';
-        const flowLine = flow.lineNumber;
-        const flowColumn = flow.columnNumber;
+    const condition = getCondition(flow);
+    const hasVerb = requestVerbRegex.test(condition);
 
-        const steps = getFlowRequestSteps(flow);
+    let hasRF = false;
+    let rfPolicyName = null;
+    let rfLine = null;
+    let rfColumn = null;
 
-        const result = matcherFn(steps, flow);
+    steps.forEach(step => {
+        const stepName = getStepName(step);
 
-        if (!result.isValid) {
-            invalidFlows.push({
-                name: flowName,
-                line: flowLine,
-                column: flowColumn,
-                details: result.details
-            });
+        if (isRaiseFaultPolicyUsed(endpoint, stepName)) {
+            hasRF = true;
+            rfPolicyName = stepName;
+            rfLine = step.lineNumber;
+            rfColumn = step.columnNumber;
         }
     });
 
-    return invalidFlows;
-};
+    let details = [];
+
+    if (!hasVerb) {
+        details.push({
+            message: 'missing request.verb condition',
+            line: flow.lineNumber,
+            column: flow.columnNumber
+        });
+    }
+
+    if (!hasRF) {
+        details.push({
+            message: 'missing RaiseFault policy',
+            line: flow.lineNumber,
+            column: flow.columnNumber
+        });
+    }
+
+    return {
+        isValid: hasVerb && hasRF,
+        details
+    };
+});
