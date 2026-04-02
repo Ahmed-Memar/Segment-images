@@ -22,3 +22,21 @@
  * - column: number
  * - details: Array
  */
+
+
+
+/**
+ * Apply matcherFn to each flow and collect invalid ones
+ *
+ * @param {Function} matcherFn - Flow validation function
+ *
+ * matcherFn arguments:
+ * - steps: Array<Element> (Request Step elements)
+ * - flow: Element (Flow XML element)
+ *
+ * matcherFn return:
+ * - isValid: boolean
+ * - details: Array<{message: string, line: number, column: number}>
+ *
+ * @returns {Array<{name: string, line: number, column: number, details: Array}>}
+ */
