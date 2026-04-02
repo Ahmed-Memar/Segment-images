@@ -1,29 +1,9 @@
-return steps.some(step => {
-  const condition = getCondition(step);
-
-  if (isWsdlFlow(condition)) return false;
-
-  const stepName = getStepName(step);
-
-  return conditionHasRequestVerb(condition) &&
-         isRaiseFaultPolicyUsed(endpoint, stepName);
-});
-
-
-
-
-
-const hasRF = steps.some(step =>
-  isRaiseFaultPolicyUsed(endpoint, getStepName(step))
-);
-
-
-debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
-
-
-
-const details = [];
-
-
-debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
-
+/**
+ * Apply matcherFn to each flow and collect invalid ones
+ *
+ * @param {(steps: Array<Element>, flow: Element) => {isValid: boolean, details: Array<{message: string, line: number, column: number}>}} matcherFn
+ * Function used to validate a flow based on its Request steps
+ *
+ * @returns {Array<{name: string, line: number, column: number, details: Array}>}
+ * List of invalid flows with metadata and validation details
+ */
