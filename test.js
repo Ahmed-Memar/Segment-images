@@ -25,5 +25,5 @@ debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
 const details = [];
 
 
-
+debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
 
