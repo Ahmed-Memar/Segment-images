@@ -1,7 +1,13 @@
+// Rule identifier for the plugin
 const ruleId = 'EX-CS009';
 
+// Debug logger for troubleshooting
 const debug = require('debug')('apigeelint:' + ruleId);
+
+// XPath for XML parsing
 const xpath = require('xpath');
+
+// Import helper functions from security-lib
 const {
   getPoliciesByType,
   getFlows,
@@ -11,6 +17,7 @@ const {
   findFlowsNotMatching
 } = require('./lib/security-lib.js');
 
+// Plugin metadata definition
 const plugin = {
   ruleId: ruleId,
   name: "Check Access Token Control",
@@ -21,13 +28,13 @@ const plugin = {
   enabled: true
 };
 
-// Helpers
-
+// Helper to safely extract text from XML node
 const getNodeText = node =>
   node && node.firstChild && node.firstChild.data
     ? node.firstChild.data.trim()
     : '';
 
+// Check if OAuthV2 policy is used for VerifyAccessToken
 const isVerifyAccessTokenPolicy = policy => {
   const el = policy.getElement();
 
@@ -44,6 +51,7 @@ const isVerifyAccessTokenPolicy = policy => {
   return /^VerifyAccessToken$/i.test(operationValue);
 };
 
+// Retrieve valid access token validation policies (OAuthV2 or VerifyJWT)
 const getValidAccessTokenPolicies = endpoint => {
   const oauthPolicies = getPoliciesByType(endpoint, 'OAuthV2')
     .filter(isVerifyAccessTokenPolicy);
@@ -53,12 +61,15 @@ const getValidAccessTokenPolicies = endpoint => {
   return [...oauthPolicies, ...verifyJwtPolicies];
 };
 
+// Extract names of valid access token policies
 const getValidAccessTokenPolicyNames = endpoint =>
   getValidAccessTokenPolicies(endpoint).map(policy => policy.getName());
 
+// Check if a given policy name is a valid access token validator
 const isValidAccessTokenPolicyUsed = (endpoint, policyName) =>
   getValidAccessTokenPolicyNames(endpoint).includes(policyName);
 
+// Check if PreFlow enforces access token validation
 const checkPreFlowProtection = endpoint => {
   const steps = getPreFlowRequestSteps(endpoint);
 
@@ -67,8 +78,7 @@ const checkPreFlowProtection = endpoint => {
   );
 };
 
-// Main
-
+// Main function executed on each proxy endpoint
 const onProxyEndpoint = function (endpoint, cb) {
   debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
 
@@ -76,43 +86,44 @@ const onProxyEndpoint = function (endpoint, cb) {
   const line = el.lineNumber;
   const column = el.columnNumber;
 
+  // Get all valid access token validation policies
   const validPolicies = getValidAccessTokenPolicies(endpoint);
   const validPolicyNames = validPolicies.map(policy => policy.getName());
 
-  // 1. Presence check
+  // 1. Fail if no validation policy exists
   if (validPolicies.length === 0) {
     endpoint.addMessage({
       plugin,
       line,
       column,
       message:
-        'API does not implement access token validation. Missing OAuthV2 with Operation="VerifyAccessToken" or VerifyJWT policy.'
+        'API does not implement access token validation. Missing OAuthV2 VerifyAccessToken or VerifyJWT policy.'
     });
 
     return cb(null, true);
   }
 
-  // 2. If PreFlow enforces token validation, consider the proxy compliant
+  // 2. Pass if validation is enforced globally in PreFlow
   if (checkPreFlowProtection(endpoint)) {
     return cb(null, false);
   }
 
   const flows = getFlows(endpoint);
 
-  // 3. No flows defined and no PreFlow protection => global error
+  // 3. Fail if no flows and no PreFlow protection
   if (flows.length === 0) {
     endpoint.addMessage({
       plugin,
       line,
       column,
       message:
-        'API defines access token validation policies but does not enforce them. No PreFlow or Flow applies OAuthV2 VerifyAccessToken or VerifyJWT.'
+        'API defines validation policies but does not enforce them in PreFlow or flows.'
     });
 
     return cb(null, true);
   }
 
-  // 4. Validate each Flow using a generic matcher
+  // 4. Validate each flow contains access token validation
   const invalidFlows = findFlowsNotMatching(endpoint, (flow) => {
     const steps = getFlowRequestSteps(flow);
 
@@ -124,7 +135,7 @@ const onProxyEndpoint = function (endpoint, cb) {
 
     if (!hasAccessTokenValidation) {
       details.push({
-        message: 'missing access token validation policy in Request flow (OAuthV2 VerifyAccessToken or VerifyJWT)',
+        message: 'missing access token validation (OAuthV2 VerifyAccessToken or VerifyJWT)',
         line: flow.lineNumber,
         column: flow.columnNumber
       });
@@ -136,6 +147,7 @@ const onProxyEndpoint = function (endpoint, cb) {
     };
   });
 
+  // 5. Fail if some flows are not protected
   if (invalidFlows.length > 0) {
     invalidFlows.forEach(flow => {
       const messages = flow.details.map(d => d.message);
@@ -151,9 +163,11 @@ const onProxyEndpoint = function (endpoint, cb) {
     return cb(null, true);
   }
 
+  // 6. Pass if all checks are satisfied
   return cb(null, false);
 };
 
+// Export plugin entry points
 module.exports = {
   plugin,
   onProxyEndpoint,
