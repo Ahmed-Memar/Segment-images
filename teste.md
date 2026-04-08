@@ -1,13 +1,28 @@
-Au début, j’ai d’abord collecté les exigences de sécurité, puis je les ai analysées pour voir ce qu’on pouvait vérifier directement à partir du bundle et automatiser. Ensuite, j’ai fait le mapping entre les exigences et les policies Apigee correspondantes, ce qui m’a permis de construire une base solide pour travailler.
-Après ça, je suis passé à l’implémentation des plugins. J’ai commencé par l’exigence de validation de schéma, avec trois plugins : OASValidation, MessageValidation et un plugin global.
-Et actuellement, je suis presque à la fin de la deuxième exigence, qui est le contrôle des méthodes HTTP.
+## API Sensitivity Handling
 
+Some security requirements depend on the sensitivity level of the API (S1, S2, S3, S4), as defined in the Security Matrix.
 
-🔹 Question 1 (top)
-Est-ce que vous avez déjà des contrôles de sécurité automatisés dans votre pipeline aujourd’hui ?
+This information is not available in the Apigee proxy bundle and must be provided externally during the execution of the plugins.
 
-🔹 Question 2
-À quel moment du pipeline vous pensez intégrer apigeelint ? Avant build ou avant déploiement ?
+### Environment Variable
 
-🔹 Question 3 (bonus)
-Est-ce que vous utilisez des shared flows pour la sécurité ?
+The sensitivity level is provided via an environment variable injected by the CI/CD pipeline:
+
+- **Name:** APIGEE_LINT_API_SENSITIVITY
+- **Allowed values:** S1, S2, S3, S4
+
+### Behavior
+
+- If the variable is defined with a valid value:
+  - The plugin applies the control according to the sensitivity level
+
+- If the variable is not defined or has an invalid value:
+  - A warning is generated
+  - The sensitivity defaults to **S4** (most restrictive level)
+
+### Rationale
+
+This approach ensures:
+- A secure default behavior
+- Compatibility with different CI/CD environments
+- No dependency on proxy configuration
