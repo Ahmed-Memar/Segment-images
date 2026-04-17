@@ -40,3 +40,164 @@
   - AdditionalClaims
   - TimeAllowance
   - Advanced JWT features
+
+
+
+
+
+
+---
+
+🔴 1. Algorithm (<Algorithm>)
+
+👉 Définit comment la signature du token est vérifiée (ex : RS256).
+
+👉 Doit être présent et utiliser un algorithme sécurisé (refuser none).
+
+👉 On met ERROR car sans algorithme, la vérification du token n’est pas fiable et peut être contournée.
+
+
+
+---
+
+🔴 2. Key (<PublicKey> / <SecretKey>)
+
+👉 C’est la clé utilisée pour vérifier la signature du token.
+
+👉 Doit être présente et cohérente avec l’algorithme utilisé (HS → SecretKey, RS → PublicKey).
+
+👉 On met ERROR car sans clé, aucune vérification réelle n’est faite.
+
+
+
+---
+
+🟠 3. Issuer (<Issuer>)
+
+👉 Indique qui a créé le token (ex : serveur d’authentification).
+
+👉 Doit être défini pour accepter uniquement les tokens d’une source fiable.
+
+👉 On met WARNING car c’est très important pour la sécurité, mais l’absence ne casse pas techniquement la vérification.
+
+
+
+---
+
+🟠 4. Audience (<Audience>)
+
+👉 Indique pour quelle API le token a été créé.
+
+👉 Doit être défini pour éviter qu’un token soit utilisé sur une autre API.
+
+👉 On met WARNING car c’est une bonne pratique de sécurité, mais pas strictement obligatoire pour vérifier la signature.
+
+
+
+---
+
+🟠 5. IgnoreUnresolvedVariables (<IgnoreUnresolvedVariables>)
+
+👉 Définit le comportement si une variable (ex : clé) ne peut pas être résolue.
+
+👉 Doit être false pour bloquer la requête en cas de problème.
+
+👉 On met WARNING car une mauvaise configuration peut créer un bypass de sécurité, mais ce n’est pas toujours critique dans tous les cas.
+
+
+
+---
+
+🟠 6. Key Source (<PublicKey><Value>)
+
+👉 Indique comment la clé est fournie (hardcodée ou via une référence).
+
+👉 Doit utiliser une référence (ref=) et éviter les valeurs en dur dans le code.
+
+👉 On met WARNING car c’est une bonne pratique de sécurité (éviter fuite de clé), mais ça ne casse pas la validation du token.
+
+
+
+---
+
+⚪ 7. Source (<Source>)
+
+👉 Indique où le token est récupéré (ex : header Authorization).
+
+👉 Peut être défini, mais Apigee utilise déjà une valeur par défaut sécurisée.
+
+👉 On ne met ni erreur ni warning car ce paramètre est optionnel et déjà bien géré par défaut.
+
+
+
+---
+
+⚪ 8. Expiration (exp claim)
+
+👉 Indique la date d’expiration du token.
+
+👉 Est automatiquement vérifiée par Apigee dans VerifyJWT.
+
+👉 On ne met ni erreur ni warning car c’est déjà géré par la plateforme.
+
+
+
+---
+
+⚪ 9. Not Before (nbf claim)
+
+👉 Indique à partir de quand le token est valide.
+
+👉 Est automatiquement pris en compte par Apigee si présent.
+
+👉 On ne met ni erreur ni warning car ce n’est pas nécessaire de le recontrôler.
+
+
+
+---
+
+⚪ 10. Subject (<Subject>)
+
+👉 Représente l’utilisateur ou le client du token.
+
+👉 Peut être utilisé selon le besoin métier de l’API.
+
+👉 On ne met ni erreur ni warning car cela dépend du contexte métier et n’est pas générique.
+
+
+
+---
+
+⚪ 11. AdditionalClaims (<AdditionalClaims>)
+
+👉 Permet de vérifier des champs spécifiques (ex : scope, rôle).
+
+👉 Dépend fortement de la logique métier de chaque API.
+
+👉 On ne met ni erreur ni warning car ce n’est pas applicable de manière générale.
+
+
+
+---
+
+⚪ 12. TimeAllowance (<TimeAllowance>)
+
+👉 Permet d’ajouter une tolérance de temps pour gérer les décalages d’horloge.
+
+👉 Peut être utilisé dans des cas spécifiques mais rarement nécessaire.
+
+👉 On ne met ni erreur ni warning car c’est un réglage avancé et non critique.
+
+
+
+---
+
+🏁 Conclusion simple
+
+👉 Ton plugin vérifie :
+
+✔️ que la validation existe et est correcte (ERROR)
+
+✔️ que les bonnes pratiques sont respectées (WARNING)
+
+❌ sans entrer dans la logique métier ou les cas rares
