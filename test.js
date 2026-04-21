@@ -1,34 +1,36 @@
-<VerifyJWT name="jwt-Decode" enabled="true" continueOnError="false">
-    <Algorithm>RS256</Algorithm>
+PublicKey
 
-    <PublicKey>
-        <Value ref="public.key.variable"/>
-    </PublicKey>
-
-    <Issuer>https://issuer.example.com</Issuer>
-
-    <Audience>your-api-audience</Audience>
-
-    <IgnoreUnresolvedVariables>false</IgnoreUnresolvedVariables>
-</VerifyJWT>
+<Value ref="public.key.variable"/>
 
 
+<Value>-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtest123...
+-----END PUBLIC KEY-----</Value>
+
+
+<Value ref="private.kvm.publickey"/>
+
+
+<Certificate>my-cert-alias</Certificate>
+
+<JWKS uri="https://example.com/.well-known/jwks.json"/>
 
 
 
-// 🚨 If Algorithm is missing → also fail on key
-if (!algorithm) {
-    const hasSecret = hasSecretKey(el);
-    const hasPublic = hasPublicKey(el);
 
-    if (!hasSecret && !hasPublic) {
-        endpoint.addMessage({
-            plugin,
-            line,
-            column,
-            message: `VerifyJWT policy "${policy.getName()}" must define <PublicKey> or <SecretKey>.`
-        });
-    }
 
-    return; // ⛔ stop here (important)
-}
+
+
+<SecretKey>
+    <Value ref="secret.key.variable"/>
+</SecretKey>
+
+
+<SecretKey>
+    <Value>my-secret-key-123</Value>
+</SecretKey>
+
+
+<SecretKey>
+    <Value ref="private.kvm.secretkey"/>
+</SecretKey>
