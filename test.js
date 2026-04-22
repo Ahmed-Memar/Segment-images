@@ -1,36 +1,27 @@
-PublicKey
+const classifyJwtAlgorithm = algorithm => {
+  const value = (algorithm || '').trim().toUpperCase();
 
-<Value ref="public.key.variable"/>
+  const approved = [
+    'HS256', 'HS384', 'HS512',
+    'PS256', 'PS384', 'PS512',
+    'ES256', 'ES384', 'ES512'
+  ];
 
+  const legacy = [
+    'RS256', 'RS384', 'RS512'
+  ];
 
-<Value>-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtest123...
------END PUBLIC KEY-----</Value>
+  if (approved.includes(value)) {
+    return { status: 'approved', family: value.slice(0, 2), value };
+  }
 
+  if (legacy.includes(value)) {
+    return { status: 'legacy', family: value.slice(0, 2), value };
+  }
 
-<Value ref="private.kvm.publickey"/>
+  if (value === 'NONE') {
+    return { status: 'forbidden', family: null, value };
+  }
 
-
-<Certificate>my-cert-alias</Certificate>
-
-<JWKS uri="https://example.com/.well-known/jwks.json"/>
-
-
-
-
-
-
-
-<SecretKey>
-    <Value ref="secret.key.variable"/>
-</SecretKey>
-
-
-<SecretKey>
-    <Value>my-secret-key-123</Value>
-</SecretKey>
-
-
-<SecretKey>
-    <Value ref="private.kvm.secretkey"/>
-</SecretKey>
+  return { status: 'unsupported', family: null, value };
+};
