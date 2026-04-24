@@ -1,11 +1,20 @@
 /**
- * Analyze VerifyJWT policy
+ * Retrieve access token validation policies and JWT analysis
  *
- * @param {Object} policy - Apigee policy object
+ * @param {Object} endpoint - Apigee endpoint object
  * @returns {{
- *   policy: Object,
- *   isValid: boolean, // true if no errors
- *   errors: Array<{line: number, column: number, message: string}>,
- *   warnings: Array<{line: number, column: number, message: string}>
+ *   oauthPolicies: Array<Object>,
+ *   verifyJwtAnalyses: Array<Object>,
+ *   validPolicies: Array<Object>
  * }}
+ */
+
+
+
+
+/**
+ * Get names of valid access token policies
+ *
+ * @param {Object} endpoint - Apigee endpoint object
+ * @returns {Array<string>} list of policy names
  */
