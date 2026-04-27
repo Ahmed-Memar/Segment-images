@@ -2,10 +2,8 @@ import os
 import json
 from collections import defaultdict
 
-# 🔧 chemin vers le dossier contenant les JSON
-FOLDER_PATH = "results_json"   # à modifier
+FOLDER_PATH = "results_json"
 
-# structure des stats
 plugin_stats = defaultdict(lambda: {
     "total_alerts": 0,
     "fail": 0,
@@ -13,7 +11,6 @@ plugin_stats = defaultdict(lambda: {
     "apis": set()
 })
 
-# parcourir tous les fichiers JSON
 for filename in os.listdir(FOLDER_PATH):
     if filename.endswith(".json"):
         filepath = os.path.join(FOLDER_PATH, filename)
@@ -25,28 +22,35 @@ for filename in os.listdir(FOLDER_PATH):
                 print(f"Erreur lecture {filename}")
                 continue
 
-        # chaque fichier = 1 API
         api_name = filename
 
-        for item in data:
-            messages = item.get("messages", [])
+        # 🔥 CORRECTION ICI
+        for block in data:          # niveau 1 (liste)
+            if isinstance(block, list):
+                items = block
+            else:
+                items = [block]
 
-            for msg in messages:
-                rule_id = msg.get("ruleId", "UNKNOWN")
-                severity = msg.get("severity", 0)
+            for item in items:     # niveau 2 (dict attendu)
 
-                plugin_stats[rule_id]["total_alerts"] += 1
-                plugin_stats[rule_id]["apis"].add(api_name)
+                if not isinstance(item, dict):
+                    continue
 
-                # 🔴 FAIL (severity = 2)
-                if severity == 2:
-                    plugin_stats[rule_id]["fail"] += 1
+                messages = item.get("messages", [])
 
-                # 🟡 WARNING (severity = 1)
-                elif severity == 1:
-                    plugin_stats[rule_id]["warning"] += 1
+                for msg in messages:
+                    rule_id = msg.get("ruleId", "UNKNOWN")
+                    severity = msg.get("severity", 0)
 
-# afficher les résultats
+                    plugin_stats[rule_id]["total_alerts"] += 1
+                    plugin_stats[rule_id]["apis"].add(api_name)
+
+                    if severity == 2:
+                        plugin_stats[rule_id]["fail"] += 1
+                    elif severity == 1:
+                        plugin_stats[rule_id]["warning"] += 1
+
+
 print("\n📊 Résultats par plugin\n")
 
 for rule_id, stats in plugin_stats.items():
