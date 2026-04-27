@@ -15,25 +15,29 @@ TARGET_RULES = {
 }
 
 plugin_stats = defaultdict(lambda: {
-    "alerts": 0,
+    "fail": 0,
+    "warning": 0,
     "apis": set()
 })
 
 
 def process_entry(entry, filename):
-    # Si c'est un dict
     if isinstance(entry, dict):
         messages = entry.get("messages", [])
 
         for msg in messages:
             if isinstance(msg, dict):
                 rule_id = msg.get("ruleId")
+                severity = msg.get("severity")
 
                 if rule_id in TARGET_RULES:
-                    plugin_stats[rule_id]["alerts"] += 1
+                    if severity == 2:
+                        plugin_stats[rule_id]["fail"] += 1
+                    elif severity == 1:
+                        plugin_stats[rule_id]["warning"] += 1
+
                     plugin_stats[rule_id]["apis"].add(filename)
 
-    # Si c'est une liste → on descend dedans
     elif isinstance(entry, list):
         for sub in entry:
             process_entry(sub, filename)
@@ -57,7 +61,11 @@ print("\n===== RESULTATS PAR PLUGIN =====\n")
 
 for rule in sorted(TARGET_RULES):
     stats = plugin_stats[rule]
+    total = stats["fail"] + stats["warning"]
+
     print(f"{rule}")
-    print(f"  Alerts: {stats['alerts']}")
+    print(f"  FAIL: {stats['fail']}")
+    print(f"  WARNING: {stats['warning']}")
+    print(f"  TOTAL: {total}")
     print(f"  APIs impactees: {len(stats['apis'])}")
     print()
