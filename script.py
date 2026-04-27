@@ -2,74 +2,55 @@ import os
 import json
 from collections import defaultdict
 
-FOLDER_PATH = "results_json"
+# 📁 Dossier contenant les JSON (à modifier)
+FOLDER_PATH = "C:/chemin/vers/ton/dossier/json"
 
+# 🎯 Plugins à analyser
+TARGET_RULES = {
+    "EX-CS002",
+    "EX-CS003",
+    "EX-CS004",
+    "EX-CS005",
+    "EX-CS006",
+    "EX-CS007",
+    "EX-CS008"
+}
+
+# 📊 Stockage résultats
 plugin_stats = defaultdict(lambda: {
-    "total_alerts": 0,
-    "fail": 0,
-    "warning": 0,
+    "alerts": 0,
     "apis": set()
 })
 
-# 🔥 pour éviter doublons
-seen_messages = set()
-
+# 🔍 Parcours des fichiers
 for filename in os.listdir(FOLDER_PATH):
     if filename.endswith(".json"):
-        filepath = os.path.join(FOLDER_PATH, filename)
+        file_path = os.path.join(FOLDER_PATH, filename)
 
-        with open(filepath, "r", encoding="utf-8") as f:
-            try:
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            except:
-                print(f"Erreur lecture {filename}")
-                continue
 
-        api_name = filename
+            # Chaque fichier contient une liste d’objets
+            for entry in data:
+                messages = entry.get("messages", [])
 
-        # 🔍 parcourir récursivement (plus fiable)
-        def extract_items(obj):
-            if isinstance(obj, dict):
-                yield obj
-            elif isinstance(obj, list):
-                for x in obj:
-                    yield from extract_items(x)
+                for msg in messages:
+                    rule_id = msg.get("ruleId")
 
-        for item in extract_items(data):
+                    if rule_id in TARGET_RULES:
+                        plugin_stats[rule_id]["alerts"] += 1
+                        plugin_stats[rule_id]["apis"].add(filename)
 
-            messages = item.get("messages", [])
+        except Exception as e:
+            print(f"Erreur lecture {filename}: {e}")
 
-            for msg in messages:
-                rule_id = msg.get("ruleId", "UNKNOWN").strip()
-                severity = msg.get("severity", 0)
-                message_text = msg.get("message", "").strip()
+# 📊 Affichage résultats
+print("\n===== RESULTATS PAR PLUGIN =====\n")
 
-                # 🔥 clé unique pour éviter doublons
-                unique_key = (api_name, rule_id, message_text)
-
-                if unique_key in seen_messages:
-                    continue
-
-                seen_messages.add(unique_key)
-
-                plugin_stats[rule_id]["total_alerts"] += 1
-                plugin_stats[rule_id]["apis"].add(api_name)
-
-                if severity == 2:
-                    plugin_stats[rule_id]["fail"] += 1
-                elif severity == 1:
-                    plugin_stats[rule_id]["warning"] += 1
-
-
-# affichage trié propre
-print("\nRésultats par plugin (clean)\n")
-
-for rule_id in sorted(plugin_stats.keys()):
-    stats = plugin_stats[rule_id]
-
-    print(f"Plugin: {rule_id}")
-    print(f"  Total alerts: {stats['total_alerts']}")
-    print(f"  FAIL: {stats['fail']}")
-    print(f"  WARNING: {stats['warning']}")
-    print(f"  APIs impactées: {len(stats['apis'])}")
-    print("-" * 40)
+for rule in sorted(TARGET_RULES):
+    stats = plugin_stats[rule]
+    print(f"{rule}")
+    print(f"  ➤ Alerts: {stats['alerts']}")
+    print(f"  ➤ APIs impactées: {len(stats['apis'])}")
+    print()
