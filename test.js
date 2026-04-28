@@ -1,5 +1,18 @@
-// Find all steps using JSON
+const steps = getFlowRequestSteps(flow) || [];
+
+if (!stepsUseJSON(endpoint, steps)) {
+  return {
+    isValid: true,
+    details: []
+  };
+}
+
 const jsonSteps = steps.filter(step => stepUsesJSON(endpoint, step));
+
+// ✅ FIX HERE
+const jtpPolicies = steps
+  .map(step => getPolicyFromStep(endpoint, step))
+  .filter(policy => policy && policy.getType() === 'JSONThreatProtection');
 
 if (jtpPolicies.length === 0) {
   return {
