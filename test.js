@@ -56,6 +56,7 @@ const getNodeText = function (node) {
     : '';
 };
 
+// ✅ Signal fort 1 : ExtractVariables avec JSONPayload
 const hasExtractVariablesJSONPayload = function (endpoint) {
   const policies = getPoliciesByType(endpoint, 'ExtractVariables') || [];
 
@@ -65,6 +66,7 @@ const hasExtractVariablesJSONPayload = function (endpoint) {
   });
 };
 
+// ✅ Signal fort 2 : Transformation JSON explicite
 const hasJSONTransformationPolicy = function (endpoint) {
   return (
     (getPoliciesByType(endpoint, 'JSONToXML') || []).length > 0 ||
@@ -72,6 +74,7 @@ const hasJSONTransformationPolicy = function (endpoint) {
   );
 };
 
+// ✅ Signal fort 3 : Content-Type JSON défini
 const hasAssignMessageJSONContentType = function (endpoint) {
   const policies = getPoliciesByType(endpoint, 'AssignMessage') || [];
 
@@ -88,63 +91,24 @@ const hasAssignMessageJSONContentType = function (endpoint) {
   });
 };
 
-const hasJSONInUsedStepName = function (endpoint) {
-  const preFlowSteps = getPreFlowRequestSteps(endpoint) || [];
-
-  for (let step of preFlowSteps) {
-    const stepName = getStepName(step);
-
-    if (stepName && stepName.toLowerCase().includes('json')) {
-      return true;
-    }
-  }
-
-  const flows = getFlows(endpoint) || [];
-
-  for (let flow of flows) {
-    const steps = getFlowRequestSteps(flow) || [];
-
-    for (let step of steps) {
-      const stepName = getStepName(step);
-
-      if (stepName && stepName.toLowerCase().includes('json')) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-};
-
+// 🎯 Détection finale simplifiée (signaux forts uniquement)
 const usesJSON = function (endpoint) {
-  let score = 0;
+  const result =
+    hasExtractVariablesJSONPayload(endpoint) ||
+    hasJSONTransformationPolicy(endpoint) ||
+    hasAssignMessageJSONContentType(endpoint);
 
-  if (hasExtractVariablesJSONPayload(endpoint)) {
-    score += 3;
-  }
+  debug(`JSON usage detected: ${result}`);
 
-  if (hasJSONTransformationPolicy(endpoint)) {
-    score += 3;
-  }
-
-  if (hasAssignMessageJSONContentType(endpoint)) {
-    score += 2;
-  }
-
-  if (hasJSONInUsedStepName(endpoint)) {
-    score += 1;
-  }
-
-  debug(`JSON usage detection score: ${score}`);
-
-  return score >= 2;
+  return result;
 };
 
 const onProxyEndpoint = function (endpoint, cb) {
   debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
 
+  // ✅ Appliquer le contrôle seulement si JSON est utilisé
   if (!usesJSON(endpoint)) {
-    debug('No JSON usage detected, skipping JSONThreatProtection check');
+    debug('No JSON usage detected → skipping JSONThreatProtection check');
 
     if (typeof cb === 'function') {
       return cb(null, false);
