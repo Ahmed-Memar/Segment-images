@@ -58,8 +58,24 @@ FAIL (missing JSONThreatProtection)
 
 default.xml
 
-<Step><Name>EV-ExtractJSON</Name></Step>
-<Step><Name>JSON-Threat</Name></Step>
+<PreFlow name="PreFlow">
+  <Request>
+    <Step>
+      <Name>JSON-Threat</Name>
+    </Step>
+    <Step>
+      <Name>EV-ExtractJSON</Name>
+    </Step>
+  </Request>
+  <Response/>
+</PreFlow>
+
+<Flows>
+  <Flow name="Flow1">
+    <Condition>message.content != null</Condition>
+    <Request/>
+  </Flow>
+</Flows>
 
 JSONThreatProtection.xml
 
