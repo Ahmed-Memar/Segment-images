@@ -7,6 +7,7 @@ const SecurityLib = require('./security-lib.js');
 const {
   findFlowsNotMatching,
   getPoliciesByType,
+  getPreFlowRequestSteps,
   getFlowRequestSteps,
   getStepName
 } = SecurityLib;
@@ -21,9 +22,6 @@ const plugin = {
   enabled: true,
 };
 
-/**
- * Validate JSONThreatProtection configuration
- */
 const configCheckCallback = function (policy) {
   let compliant = true;
 
@@ -51,48 +49,39 @@ const configCheckCallback = function (policy) {
   return compliant;
 };
 
-/**
- * Helper: safely extract text from XML node
- */
 const getNodeText = function (node) {
   return node && node.firstChild && node.firstChild.data
     ? node.firstChild.data.trim()
     : '';
 };
 
-/**
- * === JSON DETECTION (STRONG SIGNALS ONLY) ===
- */
+const getPolicyByName = function (endpoint, name) {
+  return endpoint.parent.getPolicies().find(policy => policy.getName() === name);
+};
 
-/**
- * Strong signal: ExtractVariables with JSONPayload
- */
-const hasExtractVariablesJSONPayload = function (endpoint) {
-  const policies = getPoliciesByType(endpoint, 'ExtractVariables') || [];
+const getPolicyFromStep = function (endpoint, step) {
+  const stepName = getStepName(step);
+  return stepName ? getPolicyByName(endpoint, stepName) : null;
+};
 
-  return policies.some(policy => {
+// NEW: Check if a step uses JSON based on the real policy type/configuration
+const stepUsesJSON = function (endpoint, step) {
+  const policy = getPolicyFromStep(endpoint, step);
+
+  if (!policy) {
+    return false;
+  }
+
+  if (policy.getType() === 'ExtractVariables') {
     const jsonPayload = xpath.select('/ExtractVariables/JSONPayload', policy.getElement());
     return jsonPayload.length > 0;
-  });
-};
+  }
 
-/**
- * Strong signal: JSON transformation policies
- */
-const hasJSONTransformationPolicy = function (endpoint) {
-  return (
-    (getPoliciesByType(endpoint, 'JSONToXML') || []).length > 0 ||
-    (getPoliciesByType(endpoint, 'XMLToJSON') || []).length > 0
-  );
-};
+  if (policy.getType() === 'JSONToXML' || policy.getType() === 'XMLToJSON') {
+    return true;
+  }
 
-/**
- * Strong signal: AssignMessage sets Content-Type = application/json
- */
-const hasAssignMessageJSONContentType = function (endpoint) {
-  const policies = getPoliciesByType(endpoint, 'AssignMessage') || [];
-
-  return policies.some(policy => {
+  if (policy.getType() === 'AssignMessage') {
     const headers = xpath.select(
       '/AssignMessage//Headers/Header[@name="Content-Type" or @name="content-type"]',
       policy.getElement()
@@ -102,84 +91,106 @@ const hasAssignMessageJSONContentType = function (endpoint) {
       const value = getNodeText(header).toLowerCase();
       return value.includes('application/json');
     });
-  });
+  }
+
+  return false;
 };
 
-/**
- * Final JSON usage detection
- */
-const usesJSON = function (endpoint) {
-  const result =
-    hasExtractVariablesJSONPayload(endpoint) ||
-    hasJSONTransformationPolicy(endpoint) ||
-    hasAssignMessageJSONContentType(endpoint);
-
-  debug(`JSON usage detected: ${result}`);
-  return result;
+// NEW: Check if a step is JSONThreatProtection
+const stepIsJSONThreatProtection = function (endpoint, step) {
+  const policy = getPolicyFromStep(endpoint, step);
+  return policy && policy.getType() === 'JSONThreatProtection';
 };
 
-/**
- * MAIN ENTRY POINT
- */
+// NEW: Get JSONThreatProtection policies used in a list of steps
+const getJSONThreatProtectionPoliciesFromSteps = function (endpoint, steps) {
+  return steps
+    .map(step => getPolicyFromStep(endpoint, step))
+    .filter(policy => policy && policy.getType() === 'JSONThreatProtection');
+};
+
+// NEW: Check if a list of steps uses JSON
+const stepsUseJSON = function (endpoint, steps) {
+  return steps.some(step => stepUsesJSON(endpoint, step));
+};
+
 const onProxyEndpoint = function (endpoint, cb) {
   debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
 
-  // Skip if no JSON usage
-  if (!usesJSON(endpoint)) {
-    debug('No JSON usage detected → skipping JSONThreatProtection check');
-    return cb(null, false);
+  let hasIssue = false;
+
+  // NEW: PreFlow check first
+  const preFlowSteps = getPreFlowRequestSteps(endpoint) || [];
+  const preFlowJTPPolicies = getJSONThreatProtectionPoliciesFromSteps(endpoint, preFlowSteps);
+
+  // If JSONThreatProtection exists in PreFlow, it protects globally.
+  // So we only validate its configuration and skip flow-level checks.
+  if (preFlowJTPPolicies.length > 0) {
+    preFlowJTPPolicies.forEach(policy => {
+      if (!configCheckCallback(policy)) {
+        hasIssue = true;
+      }
+    });
+
+    if (typeof cb === 'function') {
+      return cb(null, hasIssue);
+    }
+
+    return;
   }
 
-  /**
-   * === FLOW-LEVEL VALIDATION USING GENERIC HELPER ===
-   */
-  const invalidFlows = findFlowsNotMatching(endpoint, (flow) => {
+  // If PreFlow uses JSON but has no JSONThreatProtection, report it.
+  if (stepsUseJSON(endpoint, preFlowSteps)) {
+    hasIssue = true;
 
+    endpoint.addMessage({
+      plugin,
+      line: endpoint.getElement().lineNumber,
+      column: endpoint.getElement().columnNumber,
+      message: 'PreFlow uses JSON but does not include JSONThreatProtection'
+    });
+  }
+
+  // NEW: Flow-level validation only when no PreFlow protection exists
+  const invalidFlows = findFlowsNotMatching(endpoint, (flow) => {
     const steps = getFlowRequestSteps(flow) || [];
 
-    // Detect if flow manipulates JSON (weak heuristic: step name)
-    const usesJsonInFlow = steps.some(step =>
-      getStepName(step).toLowerCase().includes('json')
-    );
-
-    // Skip flows not using JSON
-    if (!usesJsonInFlow) {
+    if (!stepsUseJSON(endpoint, steps)) {
       return {
         isValid: true,
         details: []
       };
     }
 
-    // Check if JSONThreatProtection is applied in this flow
-    const hasJTP = steps.some(step =>
-      getStepName(step).toLowerCase().includes('json-threat') ||
-      getStepName(step).toLowerCase().includes('jtp')
-    );
+    const jtpPolicies = getJSONThreatProtectionPoliciesFromSteps(endpoint, steps);
 
-    if (!hasJTP) {
+    if (jtpPolicies.length === 0) {
       return {
         isValid: false,
         details: [{
-          message: 'Missing JSONThreatProtection in flow',
+          message: 'missing JSONThreatProtection in Request flow',
           line: flow.lineNumber,
           column: flow.columnNumber
         }]
       };
     }
 
+    const configValid = jtpPolicies.every(policy => configCheckCallback(policy));
+
     return {
-      isValid: true,
-      details: []
+      isValid: configValid,
+      details: configValid ? [] : [{
+        message: 'invalid JSONThreatProtection configuration',
+        line: flow.lineNumber,
+        column: flow.columnNumber
+      }]
     };
   });
 
-  /**
-   * === REPORT ERRORS ===
-   */
   if (invalidFlows.length > 0) {
+    hasIssue = true;
 
     invalidFlows.forEach(flow => {
-
       const messages = flow.details.map(d => d.message);
 
       endpoint.addMessage({
@@ -188,13 +199,12 @@ const onProxyEndpoint = function (endpoint, cb) {
         column: flow.column,
         message: `Flow "${flow.name}" is not compliant: ${messages.join(' AND ')}`
       });
-
     });
-
-    return cb(null, true);
   }
 
-  return cb(null, false);
+  if (typeof cb === 'function') {
+    return cb(null, hasIssue);
+  }
 };
 
 module.exports = {
