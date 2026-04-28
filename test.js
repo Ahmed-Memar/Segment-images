@@ -1,131 +1,168 @@
-const ruleId = 'EX-CS002';
 
-const debug = require('debug')('apigeelint:' + ruleId);
-const xpath = require('xpath');
-const SecurityLib = require('./security-lib.js');
+✅ TEST 1 — NO JSON (SKIP)
 
-const {
-  PolicyChecker,
-  getPoliciesByType,
-  getFlows,
-  getPreFlowRequestSteps,
-  getFlowRequestSteps,
-  getStepName
-} = SecurityLib;
+📁 test-json-01-no-json
 
-const plugin = {
-  ruleId: ruleId,
-  name: "Check JSONThreatProtection",
-  message: "Checks if JSONThreatProtection is present and correctly configured",
-  fatal: false,
-  severity: 2,
-  nodeType: "Bundle",
-  enabled: true,
-};
+default.xml
 
-const configCheckCallback = function (policy) {
-  let compliant = true;
+<ProxyEndpoint name="default">
+  <PreFlow name="PreFlow">
+    <Request/>
+    <Response/>
+  </PreFlow>
+  <Flows/>
+  <HTTPProxyConnection>
+    <BasePath>/test</BasePath>
+    <VirtualHost>default</VirtualHost>
+  </HTTPProxyConnection>
+  <RouteRule name="noroute"/>
+</ProxyEndpoint>
 
-  [
-    'ArrayElementCount',
-    'ContainerDepth',
-    'ObjectEntryCount',
-    'ObjectEntryNameLength',
-    'StringValueLength'
-  ].forEach(config => {
-    let item = xpath.select(`/JSONThreatProtection/${config}`, policy.getElement());
+✅ Expected
 
-    if (item.length === 0) {
-      compliant = false;
+SKIP (no JSON usage)
 
-      policy.addMessage({
-        plugin: plugin,
-        line: policy.getElement().lineNumber,
-        column: policy.getElement().columnNumber,
-        message: `Required JSONThreatProtection configuration "${config}" not found for "${policy.getName()}"`
-      });
-    }
-  });
 
-  return compliant;
-};
+---
 
-const getNodeText = function (node) {
-  return node && node.firstChild && node.firstChild.data
-    ? node.firstChild.data.trim()
-    : '';
-};
+❌ TEST 2 — ExtractVariables JSON (INVALID)
 
-// ✅ Signal fort 1 : ExtractVariables avec JSONPayload
-const hasExtractVariablesJSONPayload = function (endpoint) {
-  const policies = getPoliciesByType(endpoint, 'ExtractVariables') || [];
+📁 test-json-02-extract-invalid
 
-  return policies.some(policy => {
-    const jsonPayload = xpath.select('/ExtractVariables/JSONPayload', policy.getElement());
-    return jsonPayload.length > 0;
-  });
-};
+default.xml
 
-// ✅ Signal fort 2 : Transformation JSON explicite
-const hasJSONTransformationPolicy = function (endpoint) {
-  return (
-    (getPoliciesByType(endpoint, 'JSONToXML') || []).length > 0 ||
-    (getPoliciesByType(endpoint, 'XMLToJSON') || []).length > 0
-  );
-};
+<Step>
+  <Name>EV-ExtractJSON</Name>
+</Step>
 
-// ✅ Signal fort 3 : Content-Type JSON défini
-const hasAssignMessageJSONContentType = function (endpoint) {
-  const policies = getPoliciesByType(endpoint, 'AssignMessage') || [];
+policy EV-ExtractJSON.xml
 
-  return policies.some(policy => {
-    const headers = xpath.select(
-      '/AssignMessage//Headers/Header[@name="Content-Type" or @name="content-type"]',
-      policy.getElement()
-    );
+<ExtractVariables name="EV-ExtractJSON">
+  <JSONPayload>
+    <Variable name="test">
+      <JSONPath>$.id</JSONPath>
+    </Variable>
+  </JSONPayload>
+</ExtractVariables>
 
-    return headers.some(header => {
-      const value = getNodeText(header).toLowerCase();
-      return value.includes('application/json');
-    });
-  });
-};
+❌ Expected
 
-// 🎯 Détection finale simplifiée (signaux forts uniquement)
-const usesJSON = function (endpoint) {
-  const result =
-    hasExtractVariablesJSONPayload(endpoint) ||
-    hasJSONTransformationPolicy(endpoint) ||
-    hasAssignMessageJSONContentType(endpoint);
+FAIL (missing JSONThreatProtection)
 
-  debug(`JSON usage detected: ${result}`);
 
-  return result;
-};
+---
 
-const onProxyEndpoint = function (endpoint, cb) {
-  debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
+✅ TEST 3 — ExtractVariables JSON (VALID)
 
-  // ✅ Appliquer le contrôle seulement si JSON est utilisé
-  if (!usesJSON(endpoint)) {
-    debug('No JSON usage detected → skipping JSONThreatProtection check');
+📁 test-json-03-extract-valid
 
-    if (typeof cb === 'function') {
-      return cb(null, false);
-    }
+default.xml
 
-    return;
-  }
+<Step><Name>EV-ExtractJSON</Name></Step>
+<Step><Name>JSON-Threat</Name></Step>
 
-  let checker = new PolicyChecker(plugin, 'JSONThreatProtection', debug, configCheckCallback);
-  let hasIssue = checker.check(endpoint);
+JSONThreatProtection.xml
 
-  if (typeof cb === 'function') {
-    cb(null, hasIssue);
-  }
-};
+<JSONThreatProtection name="JSON-Threat">
+  <ArrayElementCount>10</ArrayElementCount>
+  <ContainerDepth>5</ContainerDepth>
+  <ObjectEntryCount>10</ObjectEntryCount>
+  <ObjectEntryNameLength>50</ObjectEntryNameLength>
+  <StringValueLength>100</StringValueLength>
+</JSONThreatProtection>
 
-module.exports = {
-  plugin,
-  onProxyEndpoint,
-};
+✅ Expected
+
+PASS
+
+
+---
+
+❌ TEST 4 — JSONToXML (INVALID)
+
+📁 test-json-04-transform-invalid
+
+default.xml
+
+<Step>
+  <Name>JSONToXML-1</Name>
+</Step>
+
+JSONToXML.xml
+
+<JSONToXML name="JSONToXML-1"/>
+
+❌ Expected
+
+FAIL
+
+
+---
+
+❌ TEST 5 — AssignMessage JSON header (INVALID)
+
+📁 test-json-05-header-invalid
+
+default.xml
+
+<Step>
+  <Name>AM-SetHeader</Name>
+</Step>
+
+AssignMessage.xml
+
+<AssignMessage name="AM-SetHeader">
+  <Add>
+    <Headers>
+      <Header name="Content-Type">application/json</Header>
+    </Headers>
+  </Add>
+</AssignMessage>
+
+❌ Expected
+
+FAIL
+
+
+---
+
+⚠️ TEST 6 — FAKE JSON (SHOULD SKIP)
+
+📁 test-json-06-fake-json-name
+
+default.xml
+
+<Step>
+  <Name>Check-JSON-Header</Name>
+</Step>
+
+(no real JSON logic)
+
+✅ Expected
+
+SKIP
+
+👉 très important → test faux positif
+
+
+---
+
+⚠️ TEST 7 — XML ONLY (SHOULD SKIP)
+
+📁 test-json-07-xml-only
+
+default.xml
+
+<Step>
+  <Name>MV-ValidateXML</Name>
+</Step>
+
+MessageValidation.xml
+
+<MessageValidation name="MV-ValidateXML">
+  <Source>request</Source>
+</MessageValidation>
+
+✅ Expected
+
+SKIP
