@@ -1,52 +1,168 @@
-const configCheckCallback = function (policy) {
+Parfait 👍 je te donne des JSDoc propres et clairs pour chaque fonction de ton plugin.
 
-  const requiredCritical = [
-    'ContainerDepth',
-    'ObjectEntryCount',
-    'StringValueLength'
-  ];
+Tu peux les copier juste au-dessus de chaque fonction.
 
-  const optional = [
-    'ArrayElementCount',
-    'ObjectEntryNameLength'
-  ];
 
-  const allFields = [...requiredCritical, ...optional];
+---
 
-  const element = policy.getElement();
+🔹 configCheckCallback
 
-  // Check presence of fields
-  const presentFields = allFields.filter(field => {
-    const nodes = xpath.select(`/JSONThreatProtection/${field}`, element);
-    return nodes.length > 0;
-  });
+/**
+ * Validates the configuration of a JSONThreatProtection policy.
+ *
+ * Rules:
+ * - ERROR if no configuration fields are defined
+ * - WARNING if critical fields are missing
+ *
+ * @param {Object} policy - ApigeeLint policy object
+ * @param {Function} policy.getElement - Returns XML DOM element of the policy
+ * @param {Function} policy.getName - Returns policy name
+ * @param {Function} policy.addMessage - Adds lint message
+ *
+ * @returns {boolean} - Always returns false (messages are reported via addMessage)
+ */
 
-  // ❌ ERROR → no configuration at all
-  if (presentFields.length === 0) {
-    policy.addMessage({
-      plugin: plugin,
-      line: element.lineNumber,
-      column: element.columnNumber,
-      message: `JSONThreatProtection "${policy.getName()}" has no configuration defined`
-    });
-    return false;
-  }
 
-  // ⚠️ WARNING → missing critical fields
-  const missingCritical = requiredCritical.filter(field => {
-    const nodes = xpath.select(`/JSONThreatProtection/${field}`, element);
-    return nodes.length === 0;
-  });
+---
 
-  if (missingCritical.length > 0) {
-    policy.addMessage({
-      plugin: warningPlugin, // 👈 use warning severity
-      line: element.lineNumber,
-      column: element.columnNumber,
-      message: `JSONThreatProtection "${policy.getName()}" is missing critical configuration: ${missingCritical.join(', ')}`
-    });
-  }
+🔹 getNodeText
 
-  // ✅ Considered compliant (not blocking)
-  return false;
-};
+/**
+ * Extracts trimmed text content from an XML node.
+ *
+ * @param {Node} node - XML DOM node
+ *
+ * @returns {string} - Trimmed text content or empty string if not found
+ */
+
+
+---
+
+🔹 hasExtractVariablesJSONPayload
+
+/**
+ * Detects if ExtractVariables policies use JSONPayload.
+ *
+ * This is a strong signal that the proxy processes JSON payloads.
+ *
+ * @param {Object} endpoint - Apigee endpoint object
+ *
+ * @returns {boolean} - True if at least one ExtractVariables contains JSONPayload
+ */
+
+
+---
+
+🔹 hasJSONTransformationPolicy
+
+/**
+ * Detects if JSON transformation policies are present.
+ *
+ * Includes:
+ * - JSONToXML
+ * - XMLToJSON
+ *
+ * @param {Object} endpoint - Apigee endpoint object
+ *
+ * @returns {boolean} - True if any transformation policy is found
+ */
+
+
+---
+
+🔹 hasAssignMessageJSONContentType
+
+/**
+ * Detects if AssignMessage policies explicitly set Content-Type to application/json.
+ *
+ * This is a strong signal that JSON is produced or consumed.
+ *
+ * @param {Object} endpoint - Apigee endpoint object
+ *
+ * @returns {boolean} - True if JSON Content-Type is found
+ */
+
+
+---
+
+🔹 usesJSON
+
+/**
+ * Determines if the endpoint uses JSON based on strong signals.
+ *
+ * Signals:
+ * - ExtractVariables with JSONPayload
+ * - JSON transformation policies
+ * - AssignMessage setting Content-Type JSON
+ *
+ * @param {Object} endpoint - Apigee endpoint object
+ *
+ * @returns {boolean} - True if JSON usage is detected
+ */
+
+
+---
+
+🔹 onProxyEndpoint
+
+/**
+ * Main plugin entry point executed for each ProxyEndpoint.
+ *
+ * Logic:
+ * - Detect if JSON is used
+ * - If not → skip check
+ * - If yes → validate JSONThreatProtection presence and configuration
+ *
+ * @param {Object} endpoint - Apigee ProxyEndpoint object
+ * @param {Function} cb - Callback function
+ *
+ * @returns {void}
+ */
+
+
+---
+
+🔹 (si tu as ajouté la logique flow-level)
+
+usesJSONInFlow
+
+/**
+ * Detects if a specific flow uses JSON based on its request steps.
+ *
+ * @param {Object} endpoint - Apigee endpoint object
+ * @param {Node} flow - XML Flow node
+ *
+ * @returns {boolean} - True if JSON usage is detected in the flow
+ */
+
+
+---
+
+hasJSONThreatProtectionInFlow
+
+/**
+ * Checks if a JSONThreatProtection policy is applied in a flow.
+ *
+ * @param {Node} flow - XML Flow node
+ *
+ * @returns {boolean} - True if JSONThreatProtection step exists
+ */
+
+
+---
+
+✅ Résultat
+
+Avec ça ton code devient :
+
+✔️ lisible
+
+✔️ maintenable
+
+✔️ pro (niveau audit / production)
+
+
+
+---
+
+Si tu veux, prochaine étape on peut faire : 👉 README du plugin (très important pour ton stage 🔥)
