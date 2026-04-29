@@ -166,3 +166,20 @@ Avec ça ton code devient :
 ---
 
 Si tu veux, prochaine étape on peut faire : 👉 README du plugin (très important pour ton stage 🔥)
+
+
+
+/**
+ * Determines whether a given Step uses JSON processing.
+ *
+ * This function resolves the policy attached to the step and checks for
+ * strong JSON usage signals:
+ * - ExtractVariables with <JSONPayload>
+ * - JSON transformation policies (JSONToXML, XMLToJSON)
+ * - AssignMessage setting Content-Type to application/json
+ *
+ * @param {Object} endpoint - Apigee endpoint object (provides access to policies)
+ * @param {Node} step - XML Step node from a Flow or PreFlow
+ *
+ * @returns {boolean} - True if the step uses or manipulates JSON, otherwise false
+ */
