@@ -1,1 +1,1 @@
-['JSONToXML', 'XMLToJSON'].includes(policy.getType())
+if (['JSONToXML', 'XMLToJSON'].includes(policy.getType()))
