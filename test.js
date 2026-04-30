@@ -1,272 +1,231 @@
-const ruleId = 'EX-CS003';
 
-const debug = require('debug')('apigeelint:' + ruleId);
-const xpath = require('xpath');
 
-const {
-    findFlowsNotMatching,
-    getPreFlowRequestSteps,
-    getFlowRequestSteps,
-    getStepName
-} = require('./lib/security-lib.js');
+🚀 1. test-xml-01-no-xml-usage ✅ (DOIT PASSER)
 
-const plugin = {
-    ruleId: ruleId,
-    name: "Check XMLThreatProtection",
-    message: "Checks if XMLThreatProtection is present and correctly configured",
-    fatal: false,
-    severity: 2,
-    nodeType: "Bundle",
-    enabled: true,
-};
+👉 Objectif :
+❌ Pas de XML → plugin doit IGNORER
 
-const warningPlugin = JSON.parse(JSON.stringify(plugin));
-warningPlugin.severity = 1;
 
-/**
- * Validates XMLThreatProtection configuration.
- *
- * ERROR:
- * - Missing StructureLimits/NodeDepth
- * - Missing StructureLimits/ChildCount
- *
- * WARNING:
- * - Missing ValueLimits/Text
- * - Missing ValueLimits/Attribute
- * - Missing StructureLimits/AttributeCountPerElement
- *
- * @param {Object} policy - ApigeeLint policy object
- * @returns {boolean} - false if an ERROR is detected, true otherwise
- */
-const configCheckCallback = function (policy) {
-    const element = policy.getElement();
+---
 
-    const errorFields = [
-        'StructureLimits/NodeDepth',
-        'StructureLimits/ChildCount'
-    ];
+🔹 policies/AM-SetHeader.xml
 
-    const warningFields = [
-        'ValueLimits/Text',
-        'ValueLimits/Attribute',
-        'StructureLimits/AttributeCountPerElement'
-    ];
+<AssignMessage name="AM-SetHeader">
+    <Set>
+        <Headers>
+            <Header name="Content-Type">application/json</Header>
+        </Headers>
+    </Set>
+    <AssignTo createNew="false" type="request"/>
+</AssignMessage>
 
-    const getFieldNodes = (fieldPath) =>
-        xpath.select(`/XMLThreatProtection/${fieldPath}`, element);
 
-    let hasError = false;
+---
 
-    const missingErrorFields = errorFields.filter(fieldPath => {
-        return getFieldNodes(fieldPath).length === 0;
-    });
+🔹 proxies/default.xml
 
-    if (missingErrorFields.length > 0) {
-        hasError = true;
+<ProxyEndpoint name="default">
+    <PreFlow>
+        <Request>
+            <Step>
+                <Name>AM-SetHeader</Name>
+            </Step>
+        </Request>
+    </PreFlow>
+</ProxyEndpoint>
 
-        policy.addMessage({
-            plugin: plugin,
-            line: element.lineNumber,
-            column: element.columnNumber,
-            message: `XMLThreatProtection "${policy.getName()}" is missing required configuration fields: ${missingErrorFields.join(', ')}`
-        });
-    }
 
-    const missingWarningFields = warningFields.filter(fieldPath => {
-        return getFieldNodes(fieldPath).length === 0;
-    });
+---
 
-    if (missingWarningFields.length > 0) {
-        policy.addMessage({
-            plugin: warningPlugin,
-            line: element.lineNumber,
-            column: element.columnNumber,
-            message: `XMLThreatProtection "${policy.getName()}" is missing recommended configuration fields: ${missingWarningFields.join(', ')}`
-        });
-    }
+🚀 2. test-xml-02-preflow-extract-invalid ❌ (ERROR attendu)
 
-    return !hasError;
-};
+👉 XML utilisé MAIS pas de XMLThreatProtection
 
-// Get text from XML node
-const getNodeText = function (node) {
-    return node && node.firstChild && node.firstChild.data
-        ? node.firstChild.data.trim()
-        : '';
-};
 
-// Get policy object by name
-const getPolicyByName = function (endpoint, name) {
-    return endpoint.parent.getPolicies().find(p => p.getName() === name);
-};
+---
 
-const getPolicyFromStep = function (endpoint, step) {
-    const name = getStepName(step);
-    if (!name) return null;
-    return getPolicyByName(endpoint, name);
-};
+🔹 policies/EV-ExtractXML.xml
 
-/**
- * Determines whether a Step uses XML processing.
- *
- * XML indicators:
- * - ExtractVariables with <XMLPayload>
- * - XMLToJSON / JSONToXML / XSLTransform
- * - AssignMessage setting Content-Type to application/xml or text/xml
- *
- * @param {Object} endpoint - Apigee endpoint object
- * @param {Node} step - XML Step node
- * @returns {boolean}
- */
-const stepUsesXML = function (endpoint, step) {
-    const policy = getPolicyFromStep(endpoint, step);
-    if (!policy) return false;
+<ExtractVariables name="EV-ExtractXML">
+    <XMLPayload>
+        <Variable name="test">
+            <XPath>/root/value</XPath>
+        </Variable>
+    </XMLPayload>
+</ExtractVariables>
 
-    const policyType = policy.getType();
 
-    if (policyType === 'ExtractVariables') {
-        const xmlPayload = xpath.select('/ExtractVariables/XMLPayload', policy.getElement());
-        return xmlPayload.length > 0;
-    }
+---
 
-    if (['XMLToJSON', 'JSONToXML', 'XSLTransform', 'XSLTransformation'].includes(policyType)) {
-        return true;
-    }
+🔹 proxies/default.xml
 
-    if (policyType === 'AssignMessage') {
-        const headers = xpath.select(
-            '/AssignMessage//Headers/Header[@name="Content-Type" or @name="content-type"]',
-            policy.getElement()
-        );
+<ProxyEndpoint name="default">
+    <PreFlow>
+        <Request>
+            <Step>
+                <Name>EV-ExtractXML</Name>
+            </Step>
+        </Request>
+    </PreFlow>
+</ProxyEndpoint>
 
-        return headers.some(h => {
-            const value = getNodeText(h).toLowerCase();
-            return value.includes('application/xml') || value.includes('text/xml');
-        });
-    }
 
-    return false;
-};
+---
 
-/**
- * Extracts XMLThreatProtection policies from a list of steps.
- *
- * @param {Object} endpoint - Apigee endpoint object
- * @param {Array<Node>} steps - Step nodes
- * @returns {Array<Object>}
- */
-const getXMLTPPoliciesFromSteps = function (endpoint, steps) {
-    return steps
-        .map(step => getPolicyFromStep(endpoint, step))
-        .filter(p => p && p.getType() === 'XMLThreatProtection');
-};
+👉 Résultat attendu :
 
-/**
- * Main plugin entry point executed for each ProxyEndpoint.
- *
- * Logic:
- * - Request flow only
- * - If XMLThreatProtection exists in PreFlow → global protection
- * - If XML is used without XMLThreatProtection → ERROR
- * - If XMLThreatProtection config is incomplete → ERROR/WARNING
- *
- * @param {Object} endpoint - Apigee ProxyEndpoint object
- * @param {Function} cb - Callback
- */
-const onProxyEndpoint = function (endpoint, cb) {
-    debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
+ERROR → XML utilisé mais pas de XMLThreatProtection
 
-    let hasIssue = false;
 
-    // ===== PRE-FLOW CHECK =====
+---
 
-    const preFlowSteps = getPreFlowRequestSteps(endpoint) || [];
-    const preFlowXMLTP = getXMLTPPoliciesFromSteps(endpoint, preFlowSteps);
+🚀 3. test-xml-03-preflow-valid ✅ (OK)
 
-    // If PreFlow has XMLThreatProtection → global protection
-    if (preFlowXMLTP.length > 0) {
-        preFlowXMLTP.forEach(policy => {
-            if (!configCheckCallback(policy)) {
-                hasIssue = true;
-            }
-        });
+👉 XML + XMLThreatProtection bien configuré
 
-        return cb(null, hasIssue);
-    }
 
-    // If PreFlow uses XML but no XMLThreatProtection
-    const preFlowXMLSteps = preFlowSteps.filter(step => stepUsesXML(endpoint, step));
+---
 
-    if (preFlowXMLSteps.length > 0) {
-        hasIssue = true;
+🔹 policies/XML-Threat.xml
 
-        endpoint.addMessage({
-            plugin,
-            line: endpoint.getElement().lineNumber,
-            column: endpoint.getElement().columnNumber,
-            message: `PreFlow is not compliant: step(s) ${preFlowXMLSteps.map(s => `"${getStepName(s)}"`).join(', ')} use XML but no XMLThreatProtection found`
-        });
-    }
+<XMLThreatProtection name="XML-Threat">
+    <StructureLimits>
+        <NodeDepth>10</NodeDepth>
+        <ChildCount>20</ChildCount>
+        <AttributeCountPerElement>5</AttributeCountPerElement>
+    </StructureLimits>
+    <ValueLimits>
+        <Text>1000</Text>
+        <Attribute>500</Attribute>
+    </ValueLimits>
+</XMLThreatProtection>
 
-    // ===== FLOW CHECK =====
 
-    const invalidFlows = findFlowsNotMatching(endpoint, (flow) => {
-        const steps = getFlowRequestSteps(flow) || [];
+---
 
-        const xmlSteps = steps.filter(step => stepUsesXML(endpoint, step));
+🔹 policies/EV-ExtractXML.xml
 
-        if (xmlSteps.length === 0) {
-            return { isValid: true, details: [] };
-        }
+(même que avant)
 
-        const xmltpPolicies = getXMLTPPoliciesFromSteps(endpoint, steps);
 
-        // Missing XMLThreatProtection
-        if (xmltpPolicies.length === 0) {
-            return {
-                isValid: false,
-                details: xmlSteps.map(step => ({
-                    message: `Flow "${flow.getAttribute('name')}" - Step "${getStepName(step)}" uses XML but no XMLThreatProtection found`,
-                    line: step.lineNumber,
-                    column: step.columnNumber
-                }))
-            };
-        }
+---
 
-        // Invalid XMLThreatProtection configuration
-        const configValid = xmltpPolicies.every(policy => configCheckCallback(policy));
+🔹 proxies/default.xml
 
-        return {
-            isValid: configValid,
-            details: configValid ? [] : [{
-                message: `Invalid XMLThreatProtection configuration in flow "${flow.getAttribute('name')}"`,
-                line: flow.lineNumber,
-                column: flow.columnNumber
-            }]
-        };
-    });
+<ProxyEndpoint name="default">
+    <PreFlow>
+        <Request>
+            <Step>
+                <Name>XML-Threat</Name>
+            </Step>
+            <Step>
+                <Name>EV-ExtractXML</Name>
+            </Step>
+        </Request>
+    </PreFlow>
+</ProxyEndpoint>
 
-    // ===== REPORT =====
 
-    if (invalidFlows.length > 0) {
-        hasIssue = true;
+---
 
-        invalidFlows.forEach(flow => {
-            const messages = flow.details.map(d => d.message);
+👉 Résultat :
 
-            endpoint.addMessage({
-                plugin,
-                line: flow.line,
-                column: flow.column,
-                message: `Flow "${flow.getAttribute('name')}" is not compliant: ${messages.join(' AND ')}`
-            });
-        });
-    }
+PASS ✅
 
-    return cb(null, hasIssue);
-};
 
-module.exports = {
-    plugin,
-    onProxyEndpoint,
-};
+---
+
+🚀 4. test-xml-04-mix-all-errors-warnings-config ⚠️
+
+👉 Cas COMPLET (très important)
+
+
+---
+
+🔹 policies/XML-Threat.xml (config incomplète)
+
+<XMLThreatProtection name="XML-Threat">
+    <StructureLimits>
+        <NodeDepth>10</NodeDepth>
+        <!-- ChildCount manquant → ERROR -->
+    </StructureLimits>
+    <ValueLimits>
+        <!-- Text manquant → WARNING -->
+    </ValueLimits>
+</XMLThreatProtection>
+
+
+---
+
+🔹 policies/JSONToXML.xml (détection XML)
+
+<JSONToXML name="JSONToXML"/>
+
+
+---
+
+🔹 proxies/default.xml
+
+<ProxyEndpoint name="default">
+    <PreFlow>
+        <Request>
+            <Step>
+                <Name>JSONToXML</Name>
+            </Step>
+            <Step>
+                <Name>XML-Threat</Name>
+            </Step>
+        </Request>
+    </PreFlow>
+</ProxyEndpoint>
+
+
+---
+
+👉 Résultat attendu :
+
+ERROR → ChildCount manquant
+WARNING → Text manquant
+
+
+---
+
+🚀 5. test-xml-06-flow-valid ✅
+
+👉 XML utilisé dans flow (pas PreFlow)
+
+
+---
+
+🔹 policies/XML-Threat.xml
+
+(valide)
+
+
+---
+
+🔹 policies/JSONToXML.xml
+
+<JSONToXML name="JSONToXML"/>
+
+
+---
+
+🔹 proxies/default.xml
+
+<ProxyEndpoint name="default">
+
+    <Flows>
+        <Flow name="XMLFlow">
+            <Request>
+                <Step>
+                    <Name>JSONToXML</Name>
+                </Step>
+                <Step>
+                    <Name>XML-Threat</Name>
+                </Step>
+            </Request>
+        </Flow>
+    </Flows>
+
+</ProxyEndpoint>
