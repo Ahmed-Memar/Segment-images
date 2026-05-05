@@ -1,105 +1,25 @@
-# Access Token Control
+JSONThreatProtection (EX-CS002)
 
-## Description
+Parameter	Severity	Why
 
-APIs must validate access tokens using standard mechanisms (OAuthV2 or VerifyJWT) to ensure that only authorized requests are processed.
+ContainerDepth	ERROR	Limits JSON nesting depth. Without it, deeply nested payloads can cause CPU/memory exhaustion and lead to service crashes (DoS). This is the most critical structural protection.
+ObjectEntryCount	WARNING	Limits the number of keys in a JSON object. Without it, very large objects can consume significant memory. However, acceptable limits depend on business needs.
+StringValueLength	WARNING	Limits the size of string values. Without it, large payloads (e.g., long text or base64 data) can increase memory usage. This is often business-dependent.
+ArrayElementCount	WARNING	Limits the number of elements in arrays. Without it, very large arrays can lead to high memory consumption (array-based DoS).
+ObjectEntryNameLength	IGNORED	Low security impact. Limiting key length adds little protection and may introduce unnecessary noise.
+Source	IGNORED	Defaults to request. Enforcing it provides little value in this context and may increase noise.
 
----
 
-## Evaluation
-
-The API proxy must:
-
-- Implement at least one of the following:
-  - OAuthV2 (VerifyAccessToken)
-  - VerifyJWT
-
-- Ensure that access token validation is enforced on incoming requests (PreFlow or all request flows)
-
-- Verify that the VerifyJWT policy is correctly configured
 
 ---
 
-## Sensitivity Condition
+XMLThreatProtection (EX-CS003)
 
-This control depends on the API sensitivity level:
+Parameter	Severity	Why
 
-- For APIs with sensitivity levels S2, S3, S4:  
-  ➤ Access token validation is mandatory
-
-- For APIs with sensitivity level S1:  
-  ➤ This control is not mandatory
-
----
-
-## Applicable Policies
-
-### OAuthV2 (VerifyAccessToken)
-
-#### Purpose
-
-Validate OAuth2 access tokens issued by the Authorization Server.
-
----
-
-#### Configuration Requirements
-
-- The policy must be present when OAuth2 tokens are used  
-- The VerifyAccessToken operation must be configured and correctly validate incoming tokens  
-
----
-
-#### Design Decisions
-
-OAuthV2 is used for opaque tokens managed by the Authorization Server.  
-Considered compliant if properly implemented.
-
----
-
-#### Rule Logic
-
-- Check presence of OAuthV2 policy  
-- Verify it performs access token validation  
-
----
-
-### VerifyJWT
-
-#### Purpose
-
-Validate JWT access tokens by verifying signature and claims.
-
----
-
-#### Configuration Requirements
-
-The policy must be configured according to the defined security rules (see table below).
-
-👉 The table is here  
-
----
-
-#### Design Decisions
-
-The control focuses on enforcing correct configuration of the VerifyJWT policy.
-
----
-
-#### Rule Logic
-
-The plugin performs the following checks:
-
-1. Detect presence of an access token validation mechanism (OAuthV2 or VerifyJWT)
-
-2. Ensure validation is enforced in the PreFlow or in all request flows
-
-3. If VerifyJWT is used:
-   - Validate required parameters  
-   - Ensure parameters are correctly configured  
-   - Apply security rules defined in the table  
-
----
-
-## Lint Rule
-
-EX-CS009 – Access Token Control
+StructureLimits/NodeDepth	ERROR	Limits XML nesting depth. Without it, deeply nested XML can cause parser crashes or CPU exhaustion (XML bomb / DoS).
+StructureLimits/ChildCount	ERROR	Limits the number of child elements. Without it, XML structures can grow exponentially and consume large amounts of memory.
+ValueLimits/Text	WARNING	Limits the size of text nodes. Without it, large payloads (e.g., base64 or long text) can increase memory usage. Often depends on business requirements.
+ValueLimits/Attribute	WARNING	Limits the size of attribute values. Without it, attributes can carry large payloads, increasing memory usage.
+StructureLimits/AttributeCountPerElement	WARNING	Limits the number of attributes per element. Without it, attackers can create "attribute bombs" leading to memory pressure.
+Namespace / NameLimits / Comments / ProcessingInstructions	IGNORED	Low practical impact for most APIs. Including them would increase noise without significant security benefit in a first version.
