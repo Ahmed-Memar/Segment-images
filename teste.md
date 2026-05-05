@@ -1,31 +1,26 @@
-# JSONThreatProtection (EX-CS002)
+## JSONThreatProtection (EX-CS002)
 
 | Parameter | Severity | Why |
 |----------|----------|-----|
-| ContainerDepth | ERROR | Limits JSON nesting depth. Without it, deeply nested payloads can cause CPU/memory exhaustion and lead to service crashes (DoS). This is the most critical structural protection. |
-| ObjectEntryCount | WARNING | Limits the number of keys in a JSON object. Without it, very large objects can consume significant memory. However, acceptable limits depend on business needs. |
-| StringValueLength | WARNING | Limits the size of string values. Without it, large payloads (e.g., long text or base64 data) can increase memory usage. This is often business-dependent. |
-| ArrayElementCount | WARNING | Limits the number of elements in arrays. Without it, very large arrays can lead to high memory consumption (array-based DoS). |
-| ObjectEntryNameLength | IGNORED | Low security impact. Limiting key length adds little protection and may introduce unnecessary noise. |
-| Source | IGNORED | Defaults to `request`. Enforcing it provides little value in this context and may increase noise. |
+| ContainerDepth | ERROR | Defines the maximum nesting level of JSON objects and arrays. Used to control how deep a JSON structure can be. |
+| ObjectEntryCount | WARNING | Defines the maximum number of key-value pairs allowed inside a JSON object. Controls the size of JSON objects. |
+| StringValueLength | WARNING | Defines the maximum length of string values in the JSON payload. Controls how large text data can be. |
+| ArrayElementCount | WARNING | Defines the maximum number of elements allowed in a JSON array. Controls the size of arrays. |
+| ObjectEntryNameLength | IGNORED | Defines the maximum length of JSON keys. Controls how long property names can be. |
+| Source | IGNORED | Defines which message is analyzed (request, response, or message). Determines where the JSON payload is read from. |
 
----
 
-# XMLThreatProtection (EX-CS003)
+
+
+
+
+## XMLThreatProtection (EX-CS003)
 
 | Parameter | Severity | Why |
 |----------|----------|-----|
-| StructureLimits/NodeDepth | ERROR | Limits XML nesting depth. Without it, deeply nested XML can cause parser crashes or CPU exhaustion (XML bomb / DoS). |
-| StructureLimits/ChildCount | ERROR | Limits the number of child elements. Without it, XML structures can grow exponentially and consume large amounts of memory. |
-| ValueLimits/Text | WARNING | Limits the size of text nodes. Without it, large payloads (e.g., base64 or long text) can increase memory usage. Often depends on business requirements. |
-| ValueLimits/Attribute | WARNING | Limits the size of attribute values. Without it, attributes can carry large payloads, increasing memory usage. |
-| StructureLimits/AttributeCountPerElement | WARNING | Limits the number of attributes per element. Without it, attackers can create "attribute bombs" leading to memory pressure. |
-| Namespace / NameLimits / Comments / ProcessingInstructions | IGNORED | Low practical impact for most APIs. Including them would increase noise without significant security benefit in a first version. |
-
----
-
-## Severity Definition
-
-- ERROR: Critical protection missing (high risk of DoS or crash)
-- WARNING: Important but context-dependent
-- IGNORED: Low impact or intentionally excluded to reduce noise
+| StructureLimits/NodeDepth | ERROR | Defines the maximum nesting depth of XML elements. Controls how deep the XML structure can be. |
+| StructureLimits/ChildCount | ERROR | Defines the maximum number of child elements per XML node. Controls how many elements can exist under a single parent. |
+| ValueLimits/Text | WARNING | Defines the maximum length of text content inside XML elements. Controls the size of textual data. |
+| ValueLimits/Attribute | WARNING | Defines the maximum length of attribute values. Controls how large attribute data can be. |
+| StructureLimits/AttributeCountPerElement | WARNING | Defines the maximum number of attributes allowed on a single XML element. Controls attribute density. |
+| NameLimits / Namespace / Comments / ProcessingInstructions | IGNORED | Define limits for element names, namespaces, comments, and processing instructions. Control less critical XML structure details. |
