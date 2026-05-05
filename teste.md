@@ -1,3 +1,33 @@
+Au début, j’ai fait un.petit script pour filtré l'analyse des plugin, et j’ai regardé les résultats par plugin.
+Ce que j’ai remarqué, c’est que les deux premiers plugins, JSONThreatProtection et XMLThreatProtection, étaient en échec sur 100% des APIs.
+
+Du coup, je suis revenu dessus pour comprendre pourquoi ça échouait partout.
+Et j’ai identifié que le problème principal, c’est que les plugins obligeaient toutes les APIs à avoir tous les paramètres configurés, même dans des cas où ce n’est pas nécessaire.
+
+Donc ça générait beaucoup de faux positifs et ça rendait le plugin trop strict et pas adapté à la réalité.
+
+Ensuite, j’ai commencé à retravailler ces deux plugins.
+
+La première amélioration que j’ai faite, c’est de ne plus appliquer le contrôle partout, mais seulement quand il y a réellement du JSON ou du XML utilisé dans l’API.
+Pour ça, j’ai mis en place une détection basée sur quelques indicateurs simples :
+
+ExtractVariables avec JSONPayload ou XMLPayload
+
+des transformations comme JSONToXML ou XMLToJSON
+
+ou un AssignMessage avec un Content-Type en application/json ou application/xml
+
+
+Si aucun de ces cas n’est présent, le plugin ne s’applique pas.
+
+Ensuite, j’ai analysé les paramètres des policies JSONThreatProtection et XMLThreatProtection, et j’ai fait une classification deponde l'impotancz coté sécurité
+
+
+
+
+
+
+
 JSONThreatProtection (EX-CS002)
 
 ContainerDepth
