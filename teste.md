@@ -1,26 +1,110 @@
-## JSONThreatProtection (EX-CS002)
+JSONThreatProtection (EX-CS002)
 
-| Parameter | Severity | Why |
-|----------|----------|-----|
-| ContainerDepth | ERROR | Defines the maximum nesting level of JSON objects and arrays. Used to control how deep a JSON structure can be. |
-| ObjectEntryCount | WARNING | Defines the maximum number of key-value pairs allowed inside a JSON object. Controls the size of JSON objects. |
-| StringValueLength | WARNING | Defines the maximum length of string values in the JSON payload. Controls how large text data can be. |
-| ArrayElementCount | WARNING | Defines the maximum number of elements allowed in a JSON array. Controls the size of arrays. |
-| ObjectEntryNameLength | IGNORED | Defines the maximum length of JSON keys. Controls how long property names can be. |
-| Source | IGNORED | Defines which message is analyzed (request, response, or message). Determines where the JSON payload is read from. |
+ContainerDepth
+
+Il définit la profondeur maximale d’imbrication du JSON (objets et tableaux).
+
+Je l’ai mis en erreur parce que c’est le point le plus critique pour éviter les JSON très imbriqués qui peuvent bloquer ou faire tomber le système.
 
 
 
+---
+
+ObjectEntryCount
+
+Il définit le nombre maximum de clés dans un objet JSON.
+
+Je l’ai mis en warning parce que ça dépend du métier, certaines APIs peuvent avoir beaucoup de champs donc on ne peut pas bloquer directement.
 
 
 
-## XMLThreatProtection (EX-CS003)
+---
 
-| Parameter | Severity | Why |
-|----------|----------|-----|
-| StructureLimits/NodeDepth | ERROR | Defines the maximum nesting depth of XML elements. Controls how deep the XML structure can be. |
-| StructureLimits/ChildCount | ERROR | Defines the maximum number of child elements per XML node. Controls how many elements can exist under a single parent. |
-| ValueLimits/Text | WARNING | Defines the maximum length of text content inside XML elements. Controls the size of textual data. |
-| ValueLimits/Attribute | WARNING | Defines the maximum length of attribute values. Controls how large attribute data can be. |
-| StructureLimits/AttributeCountPerElement | WARNING | Defines the maximum number of attributes allowed on a single XML element. Controls attribute density. |
-| NameLimits / Namespace / Comments / ProcessingInstructions | IGNORED | Define limits for element names, namespaces, comments, and processing instructions. Control less critical XML structure details. |
+StringValueLength
+
+Il définit la taille maximale des valeurs texte dans le JSON.
+
+Je l’ai mis en warning parce que certaines APIs manipulent des données volumineuses comme du base64 ou des documents.
+
+
+
+---
+
+ArrayElementCount
+
+Il définit le nombre maximum d’éléments dans un tableau JSON.
+
+Je l’ai mis en warning parce que la taille des tableaux dépend du contexte, par exemple entre une pagination simple et un traitement en masse.
+
+
+
+---
+
+ObjectEntryNameLength
+
+Il définit la taille maximale des noms de clés JSON.
+
+Je ne l’ai pas pris en compte parce que l’impact sécurité est faible et ça risque surtout de générer du bruit inutile.
+
+
+
+---
+
+Source
+
+Il définit quel message est analysé (request, response ou message).
+
+Je ne l’ai pas pris en compte parce que la valeur par défaut suffit dans la majorité des cas et ça n’apporte pas vraiment de sécurité en plus.
+
+
+
+---
+
+🔹 XMLThreatProtection (EX-CS003)
+
+StructureLimits / NodeDepth
+
+Il définit la profondeur maximale des balises XML.
+
+Je l’ai mis en erreur parce que c’est le contrôle principal contre les XML très imbriqués qui peuvent provoquer des attaques type XML bomb.
+
+
+
+---
+
+StructureLimits / ChildCount
+
+Il définit le nombre maximum d’éléments enfants par balise.
+
+Je l’ai mis en erreur parce que ça permet d’éviter les structures XML trop volumineuses qui peuvent saturer les ressources.
+
+
+
+---
+
+ValueLimits / Text
+
+Il définit la taille maximale du texte contenu dans une balise XML.
+
+Je l’ai mis en warning parce que certaines APIs transportent des contenus longs donc ça dépend du besoin métier.
+
+
+
+---
+
+ValueLimits / Attribute
+
+Il définit la taille maximale des valeurs des attributs XML.
+
+Je l’ai mis en warning parce que c’est utile mais pas critique et ça dépend aussi du contexte de l’API.
+
+
+
+---
+
+StructureLimits / AttributeCountPerElement
+
+Il définit le nombre maximum d’attributs sur une balise XML.
+
+Je l’ai mis en warning parce que ça permet de limiter les abus mais les besoins peuvent varier selon les cas.
+
