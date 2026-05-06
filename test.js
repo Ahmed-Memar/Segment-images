@@ -1,11 +1,15 @@
-const getPoliciesFromStepsByType = (endpoint, steps, type) =>
-    steps
-        .map(step => getPolicyFromStep(endpoint, step))
-        .filter(p => p && p.getType() === type);
+const xmlPayload = getFirstNode(
+    '/ExtractVariables/XMLPayload',
+    policy.getElement()
+);
+
+return !!xmlPayload;
 
 
-getPoliciesFromStepsByType(endpoint, steps, 'JSONThreatProtection')
 
+const jsonPayload = getFirstNode(
+    '/ExtractVariables/JSONPayload',
+    policy.getElement()
+);
 
-
-getPoliciesFromStepsByType(endpoint, steps, 'XMLThreatProtection')
+return !!jsonPayload;
