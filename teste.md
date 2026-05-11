@@ -1,91 +1,22 @@
-# Injection Attacks Prevention
+## JSONThreatProtection
 
-## Description
-
-APIs processing XML or JSON payloads must implement ThreatProtection policies to prevent malicious payload structures, parser abuse, and resource exhaustion attacks.
-
-The control validates the presence and configuration quality of XMLThreatProtection and JSONThreatProtection policies when XML or JSON processing is detected in request flows.
-
----
-
-## Evaluation
-
-The API proxy must:
-
-- Detect XML or JSON processing in request flows
-- Ensure that the corresponding ThreatProtection policy is applied
-- Verify that ThreatProtection configuration includes the required security limits
+| Parameter | Description | Severity | Why |
+|---|---|---|---|
+| ContainerDepth | Defines the maximum nesting level of JSON objects and arrays. | ERROR | Excessive nesting may lead to parser abuse and resource exhaustion attacks. |
+| ObjectEntryCount | Defines the maximum number of key-value pairs allowed in a JSON object. | WARNING | Large JSON objects may increase processing cost and memory usage. |
+| StringValueLength | Defines the maximum length of string values in the JSON payload. | WARNING | Excessively large text values may increase payload processing overhead. |
+| ArrayElementCount | Defines the maximum number of elements allowed in a JSON array. | WARNING | Large arrays may increase memory consumption and parsing complexity. |
+| ObjectEntryNameLength | Defines the maximum length of JSON property names. | IGNORED | Property name length is considered low risk and highly context-dependent. |
+| Source | Defines which message is analysed (request, response, or message). | IGNORED | The default request source is considered sufficient for this control. |
 
 ---
 
-## Applicable Policies
+## XMLThreatProtection
 
-### JSONThreatProtection
-
-#### Purpose
-
-Protect APIs against malicious or excessively complex JSON payloads by enforcing structure and value limits.
-
-#### Configuration Requirements
-
-The policy must be configured according to the defined security rules as follows:
-
-👉 The JSONThreatProtection table is here
-
-#### Lint Rule
-
-EX-CS002-CheckJSONThreatProtection.js
-
----
-
-### XMLThreatProtection
-
-#### Purpose
-
-Protect APIs against malicious or excessively complex XML payloads by enforcing structure and value limits.
-
-#### Configuration Requirements
-
-The policy must be configured according to the defined security rules as follows:
-
-👉 The XMLThreatProtection table is here
-
-#### Lint Rule
-
-EX-CS003-CheckXMLThreatProtection.js
-
----
-
-## Design Decisions
-
-The control evaluates request flows only.
-
-A ThreatProtection policy configured in the PreFlow is considered sufficient coverage for all request flows.
-
-XML usage detection includes:
-
-- ExtractVariables using XMLPayload
-- XML transformation policies (XMLToJSON, JSONToXML, XSLTransform, XSLTransformation)
-- AssignMessage policies setting Content-Type to application/xml or text/xml
-
-JSON usage detection includes:
-
-- ExtractVariables using JSONPayload
-- JSON transformation policies (JSONToXML, XMLToJSON)
-- AssignMessage policies setting Content-Type to application/json
-
----
-
-## Rule Logic
-
-The plugin performs the following checks:
-
-1. Detect XML or JSON processing in request flows
-
-2. Ensure the corresponding ThreatProtection policy is applied:
-   - In the PreFlow
-   - Or in all request flows processing XML or JSON
-
-3. If ThreatProtection is used:
-   - Validate required configuration parameters
-   - Apply security rules defined in the corresponding table
+| Parameter | Description | Severity | Why |
+|---|---|---|---|
+| StructureLimits/NodeDepth | Defines the maximum nesting depth of XML elements. | ERROR | Deep XML structures may lead to parser abuse and resource exhaustion attacks. |
+| StructureLimits/ChildCount | Defines the maximum number of child elements allowed per XML node. | ERROR | Excessive child elements may significantly increase parsing complexity. |
+| ValueLimits/Text | Defines the maximum length of text content inside XML elements. | WARNING | Large text values may increase processing overhead and memory usage. |
+| ValueLimits/Attribute | Defines the maximum length of XML attribute values. | WARNING | Excessively large attribute values may increase payload size and parsing cost. |
+| StructureLimits/AttributeCountPerElement | Defines the maximum number of attributes allowed on a single XML element. | WARNING | Excessive attributes may increase XML parsing complexity and memory usage. |
