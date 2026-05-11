@@ -1,140 +1,135 @@
-Au début, j’ai fait un.petit script pour filtré l'analyse des plugin, et j’ai regardé les résultats par plugin.
-Ce que j’ai remarqué, c’est que les deux premiers plugins, JSONThreatProtection et XMLThreatProtection, étaient en échec sur 100% des APIs.
+Description
 
-Du coup, je suis revenu dessus pour comprendre pourquoi ça échouait partout.
-Et j’ai identifié que le problème principal, c’est que les plugins obligeaient toutes les APIs à avoir tous les paramètres configurés, même dans des cas où ce n’est pas nécessaire.
+APIs processing XML or JSON payloads must implement ThreatProtection policies to prevent malicious payload structures, parser abuse, and resource exhaustion attacks.
 
-Donc ça générait beaucoup de faux positifs et ça rendait le plugin trop strict et pas adapté à la réalité.
-
-Ensuite, j’ai commencé à retravailler ces deux plugins.
-
-La première amélioration que j’ai faite, c’est de ne plus appliquer le contrôle partout, mais seulement quand il y a réellement du JSON ou du XML utilisé dans l’API.
-Pour ça, j’ai mis en place une détection basée sur quelques indicateurs simples :
-
-ExtractVariables avec JSONPayload ou XMLPayload
-
-des transformations comme JSONToXML ou XMLToJSON
-
-ou un AssignMessage avec un Content-Type en application/json ou application/xml
-
-
-Si aucun de ces cas n’est présent, le plugin ne s’applique pas.
-
-Ensuite, j’ai analysé les paramètres des policies JSONThreatProtection et XMLThreatProtection, et j’ai fait une classification deponde l'impotancz coté sécurité
-
-
-
-
-
-
-
-JSONThreatProtection (EX-CS002)
-
-ContainerDepth
-
-Il définit la profondeur maximale d’imbrication du JSON (objets et tableaux).
-
-Je l’ai mis en erreur parce que c’est le point le plus critique pour éviter les JSON très imbriqués qui peuvent bloquer ou faire tomber le système.
-
+The control validates the presence and configuration quality of XMLThreatProtection and JSONThreatProtection policies when XML or JSON processing is detected in request flows.
 
 
 ---
 
-ObjectEntryCount
+Evaluation
 
-Il définit le nombre maximum de clés dans un objet JSON.
+The API proxy must:
 
-Je l’ai mis en warning parce que ça dépend du métier, certaines APIs peuvent avoir beaucoup de champs donc on ne peut pas bloquer directement.
-
-
-
----
-
-StringValueLength
-
-Il définit la taille maximale des valeurs texte dans le JSON.
-
-Je l’ai mis en warning parce que certaines APIs manipulent des données volumineuses comme du base64 ou des documents.
-
+- Detect XML or JSON processing in request flows
+- Ensure that the corresponding ThreatProtection policy is applied
+- Verify that ThreatProtection configuration includes mandatory security limits
+- Report incomplete hardening configuration through warnings
 
 
 ---
 
-ArrayElementCount
+Applicable Policies
 
-Il définit le nombre maximum d’éléments dans un tableau JSON.
+XMLThreatProtection
 
-Je l’ai mis en warning parce que la taille des tableaux dépend du contexte, par exemple entre une pagination simple et un traitement en masse.
+Purpose
 
+Protect APIs against malicious or excessively complex XML payloads by enforcing structure and value limits.
 
+Configuration Requirements
 
----
+The policy must be configured according to the defined security rules as following:
 
-ObjectEntryNameLength
-
-Il définit la taille maximale des noms de clés JSON.
-
-Je ne l’ai pas pris en compte parce que l’impact sécurité est faible et ça risque surtout de générer du bruit inutile.
-
+👉 (tu mets ton tableau XML ici)
 
 
 ---
 
-Source
+Design Decisions
 
-Il définit quel message est analysé (request, response ou message).
+The control evaluates request flows only.
 
-Je ne l’ai pas pris en compte parce que la valeur par défaut suffit dans la majorité des cas et ça n’apporte pas vraiment de sécurité en plus.
+A XMLThreatProtection policy configured in the PreFlow is considered global protection for all request flows.
 
-
-
----
-
-🔹 XMLThreatProtection (EX-CS003)
-
-StructureLimits / NodeDepth
-
-Il définit la profondeur maximale des balises XML.
-
-Je l’ai mis en erreur parce que c’est le contrôle principal contre les XML très imbriqués qui peuvent provoquer des attaques type XML bomb.
-
+XML usage detection includes:
+- ExtractVariables using XMLPayload
+- XML transformation policies (XMLToJSON, JSONToXML, XSLTransform, XSLTransformation)
+- AssignMessage policies setting Content-Type to application/xml or text/xml
 
 
 ---
 
-StructureLimits / ChildCount
+Rule Logic
 
-Il définit le nombre maximum d’éléments enfants par balise.
+The plugin performs the following checks:
 
-Je l’ai mis en erreur parce que ça permet d’éviter les structures XML trop volumineuses qui peuvent saturer les ressources.
+1. Detect XML processing in request flows
 
+2. Ensure XMLThreatProtection is applied:
+   - In the PreFlow
+   - Or in all request flows processing XML
 
+3. If XMLThreatProtection is used:
+   - Validate required configuration parameters
+   - Apply security rules defined in the table
 
----
-
-ValueLimits / Text
-
-Il définit la taille maximale du texte contenu dans une balise XML.
-
-Je l’ai mis en warning parce que certaines APIs transportent des contenus longs donc ça dépend du besoin métier.
-
-
-
----
-
-ValueLimits / Attribute
-
-Il définit la taille maximale des valeurs des attributs XML.
-
-Je l’ai mis en warning parce que c’est utile mais pas critique et ça dépend aussi du contexte de l’API.
-
+4. Report:
+   - ERROR for missing mandatory protection
+   - ERROR for missing required limits
+   - WARNING for missing recommended hardening limits
 
 
 ---
 
-StructureLimits / AttributeCountPerElement
+Lint Rule
 
-Il définit le nombre maximum d’attributs sur une balise XML.
+EX-CS003 - CheckXMLThreatProtection.js
 
-Je l’ai mis en warning parce que ça permet de limiter les abus mais les besoins peuvent varier selon les cas.
 
+---
+
+JSONThreatProtection
+
+Purpose
+
+Protect APIs against malicious or excessively complex JSON payloads by enforcing structure and value limits.
+
+Configuration Requirements
+
+The policy must be configured according to the defined security rules as following:
+
+👉 (tu mets ton tableau JSON ici)
+
+
+---
+
+Design Decisions
+
+The control evaluates request flows only.
+
+A JSONThreatProtection policy configured in the PreFlow is considered global protection for all request flows.
+
+JSON usage detection includes:
+- ExtractVariables using JSONPayload
+- JSON transformation policies (JSONToXML, XMLToJSON)
+- AssignMessage policies setting Content-Type to application/json
+
+
+---
+
+Rule Logic
+
+The plugin performs the following checks:
+
+1. Detect JSON processing in request flows
+
+2. Ensure JSONThreatProtection is applied:
+   - In the PreFlow
+   - Or in all request flows processing JSON
+
+3. If JSONThreatProtection is used:
+   - Validate required configuration parameters
+   - Apply security rules defined in the table
+
+4. Report:
+   - ERROR for missing mandatory protection
+   - ERROR for missing required limits
+   - WARNING for missing recommended hardening limits
+
+
+---
+
+Lint Rule
+
+EX-CS002 - CheckJSONThreatProtection.js
