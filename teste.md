@@ -1,76 +1,82 @@
-Description
+# Injection Attacks Prevention
+
+## Description
 
 APIs processing XML or JSON payloads must implement ThreatProtection policies to prevent malicious payload structures, parser abuse, and resource exhaustion attacks.
 
 The control validates the presence and configuration quality of XMLThreatProtection and JSONThreatProtection policies when XML or JSON processing is detected in request flows.
 
-
 ---
 
-Evaluation
+## Evaluation
 
 The API proxy must:
 
 - Detect XML or JSON processing in request flows
 - Ensure that the corresponding ThreatProtection policy is applied
-- Verify that ThreatProtection configuration includes mandatory security limits
-- Report incomplete hardening configuration through warnings
-
+- Verify that ThreatProtection configuration includes the required security limits
 
 ---
 
-Applicable Policies
+## Applicable Policies
 
-XMLThreatProtection
+### JSONThreatProtection
 
-Purpose
-
-Protect APIs against malicious or excessively complex XML payloads by enforcing structure and value limits.
-
-Configuration Requirements
-
-The policy must be configured according to the defined security rules as following:
-
-👉 (insert XMLThreatProtection table here)
-
-
----
-
-JSONThreatProtection
-
-Purpose
+#### Purpose
 
 Protect APIs against malicious or excessively complex JSON payloads by enforcing structure and value limits.
 
-Configuration Requirements
+#### Configuration Requirements
 
-The policy must be configured according to the defined security rules as following:
+The policy must be configured according to the defined security rules as follows:
 
-👉 (insert JSONThreatProtection table here)
+👉 The JSONThreatProtection table is here
 
+#### Lint Rule
+
+EX-CS002-CheckJSONThreatProtection.js
 
 ---
 
-Design Decisions
+### XMLThreatProtection
+
+#### Purpose
+
+Protect APIs against malicious or excessively complex XML payloads by enforcing structure and value limits.
+
+#### Configuration Requirements
+
+The policy must be configured according to the defined security rules as follows:
+
+👉 The XMLThreatProtection table is here
+
+#### Lint Rule
+
+EX-CS003-CheckXMLThreatProtection.js
+
+---
+
+## Design Decisions
 
 The control evaluates request flows only.
 
-A ThreatProtection policy configured in the PreFlow is considered global protection for all request flows.
+A ThreatProtection policy configured in the PreFlow is considered sufficient coverage for all request flows.
 
 XML usage detection includes:
+
 - ExtractVariables using XMLPayload
 - XML transformation policies (XMLToJSON, JSONToXML, XSLTransform, XSLTransformation)
 - AssignMessage policies setting Content-Type to application/xml or text/xml
 
 JSON usage detection includes:
+
 - ExtractVariables using JSONPayload
 - JSON transformation policies (JSONToXML, XMLToJSON)
 - AssignMessage policies setting Content-Type to application/json
 
-
 ---
 
-Rule Logic
+## Rule Logic
 
 The plugin performs the following checks:
 
@@ -83,17 +89,3 @@ The plugin performs the following checks:
 3. If ThreatProtection is used:
    - Validate required configuration parameters
    - Apply security rules defined in the corresponding table
-
-4. Report:
-   - ERROR for missing mandatory protection
-   - ERROR for missing required limits
-   - WARNING for missing recommended hardening limits
-
-
----
-
-Lint Rules
-
-EX-CS002 - CheckJSONThreatProtection.js
-
-EX-CS003 - CheckXMLThreatProtection.js
