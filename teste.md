@@ -31,50 +31,7 @@ Configuration Requirements
 
 The policy must be configured according to the defined security rules as following:
 
-👉 (tu mets ton tableau XML ici)
-
-
----
-
-Design Decisions
-
-The control evaluates request flows only.
-
-A XMLThreatProtection policy configured in the PreFlow is considered global protection for all request flows.
-
-XML usage detection includes:
-- ExtractVariables using XMLPayload
-- XML transformation policies (XMLToJSON, JSONToXML, XSLTransform, XSLTransformation)
-- AssignMessage policies setting Content-Type to application/xml or text/xml
-
-
----
-
-Rule Logic
-
-The plugin performs the following checks:
-
-1. Detect XML processing in request flows
-
-2. Ensure XMLThreatProtection is applied:
-   - In the PreFlow
-   - Or in all request flows processing XML
-
-3. If XMLThreatProtection is used:
-   - Validate required configuration parameters
-   - Apply security rules defined in the table
-
-4. Report:
-   - ERROR for missing mandatory protection
-   - ERROR for missing required limits
-   - WARNING for missing recommended hardening limits
-
-
----
-
-Lint Rule
-
-EX-CS003 - CheckXMLThreatProtection.js
+👉 (insert XMLThreatProtection table here)
 
 
 ---
@@ -89,7 +46,7 @@ Configuration Requirements
 
 The policy must be configured according to the defined security rules as following:
 
-👉 (tu mets ton tableau JSON ici)
+👉 (insert JSONThreatProtection table here)
 
 
 ---
@@ -98,7 +55,12 @@ Design Decisions
 
 The control evaluates request flows only.
 
-A JSONThreatProtection policy configured in the PreFlow is considered global protection for all request flows.
+A ThreatProtection policy configured in the PreFlow is considered global protection for all request flows.
+
+XML usage detection includes:
+- ExtractVariables using XMLPayload
+- XML transformation policies (XMLToJSON, JSONToXML, XSLTransform, XSLTransformation)
+- AssignMessage policies setting Content-Type to application/xml or text/xml
 
 JSON usage detection includes:
 - ExtractVariables using JSONPayload
@@ -112,15 +74,15 @@ Rule Logic
 
 The plugin performs the following checks:
 
-1. Detect JSON processing in request flows
+1. Detect XML or JSON processing in request flows
 
-2. Ensure JSONThreatProtection is applied:
+2. Ensure the corresponding ThreatProtection policy is applied:
    - In the PreFlow
-   - Or in all request flows processing JSON
+   - Or in all request flows processing XML or JSON
 
-3. If JSONThreatProtection is used:
+3. If ThreatProtection is used:
    - Validate required configuration parameters
-   - Apply security rules defined in the table
+   - Apply security rules defined in the corresponding table
 
 4. Report:
    - ERROR for missing mandatory protection
@@ -130,6 +92,8 @@ The plugin performs the following checks:
 
 ---
 
-Lint Rule
+Lint Rules
 
 EX-CS002 - CheckJSONThreatProtection.js
+
+EX-CS003 - CheckXMLThreatProtection.js
