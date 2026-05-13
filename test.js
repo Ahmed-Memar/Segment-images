@@ -1,112 +1,102 @@
-/**
- * Check whether the endpoint contains a policy of the given type.
- *
- * @param {Object} endpoint
- * @param {string} type
- * @returns {boolean}
- */
-const hasPolicyType
+'use strict';
 
+const xpath = require('xpath');
 
----
+const { getPreFlowRequestSteps, getFlowRequestSteps } =
+    require('./lib/security-lib');
 
-/**
- * Retrieve all policies of the given type.
- *
- * @param {Object} endpoint
- * @param {string} type
- * @returns {Array<Object>}
- */
-const getPoliciesByType
+const { stepUsesJSON } =
+    require('./JSONThreatProtection');
 
+const { stepUsesXML } =
+    require('./XMLThreatProtection');
 
----
+const ruleId = 'EX-CS004';
 
-/**
- * Retrieve all Flow nodes from the ProxyEndpoint.
- *
- * @param {Object} endpoint
- * @returns {Array<Node>}
- */
-const getFlows
-
-
----
+const plugin = {
+    ruleId,
+    name: 'Detect Unknown Payload Format',
+    message:
+        'Unable to detect JSON or XML usage indicators. Manual verification may be required.',
+    fatal: false,
+    severity: 1,
+    nodeType: 'ProxyEndpoint',
+    enabled: true
+};
 
 /**
- * Extract the condition text from a Flow node.
+ * Main plugin entry point executed for each ProxyEndpoint.
  *
- * @param {Node} node
- * @returns {string}
- */
-const getCondition
-
-
----
-
-/**
- * Extract the step name from a Step node.
+ * Logic:
+ * - Detect JSON usage indicators
+ * - Detect XML usage indicators
+ * - If neither is detected → WARNING
  *
- * @param {Node} node
- * @returns {string}
- */
-const getStepName
-
-
----
-
-/**
- * Retrieve a policy by name.
+ * This plugin only analyses request flows.
  *
- * @param {Object} endpoint
- * @param {string} name
- * @returns {Object|null}
+ * @param {Object} endpoint - Apigee ProxyEndpoint object
+ * @param {Function} cb - Callback function
+ * @returns {void}
  */
-const getPolicyByName
+const onProxyEndpoint = function (endpoint, cb) {
 
+    let hasJSON = false;
+    let hasXML = false;
 
----
+    // ===== PRE-FLOW CHECK =====
 
-/**
- * Resolve the policy referenced by a Step.
- *
- * @param {Object} endpoint
- * @param {Node} step
- * @returns {Object|null}
- */
-const getPolicyFromStep
+    const preFlowSteps = getPreFlowRequestSteps(endpoint) || [];
 
+    preFlowSteps.forEach(step => {
 
----
+        if (stepUsesJSON(endpoint, step)) {
+            hasJSON = true;
+        }
 
-/**
- * Retrieve policies referenced by steps and filtered by type.
- *
- * @param {Object} endpoint
- * @param {Array<Node>} steps
- * @param {string} type
- * @returns {Array<Object>}
- */
-const getPoliciesFromStepsByType
+        if (stepUsesXML(endpoint, step)) {
+            hasXML = true;
+        }
+    });
 
+    // ===== FLOW CHECK =====
 
----
+    const flows = endpoint.getFlows();
 
-/**
- * Retrieve request steps from the PreFlow.
- *
- * @param {Object} endpoint
- * @returns {Array<Node>}
- */
-const getPreFlowRequestSteps
+    flows.forEach(flow => {
 
+        const steps = getFlowRequestSteps(flow) || [];
 
----
+        steps.forEach(step => {
 
-/**
- * Retrieve request steps from a Flow.
- *
- * @param {Node} flow
- * @returns {Array<Node>}
- */
-const getFlowRequestSteps
+            if (stepUsesJSON(endpoint, step)) {
+                hasJSON = true;
+            }
+
+            if (stepUsesXML(endpoint, step)) {
+                hasXML = true;
+            }
+        });
+    });
+
+    // ===== REPORT =====
+
+    if (!hasJSON && !hasXML) {
+
+        endpoint.addMessage({
+            plugin,
+            line: endpoint.getElement().lineNumber,
+            column: endpoint.getElement().columnNumber,
+            message:
+                'No JSON or XML usage indicators were detected in request flows. Manual verification may be required.'
+        });
+
+        return cb(null, true);
+    }
+
+    return cb(null, false);
+};
+
+module.exports = {
+    plugin,
+    onProxyEndpoint
+};
