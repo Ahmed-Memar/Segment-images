@@ -1,102 +1,134 @@
-'use strict';
+// --- Block 1: Ensure ValidateMessageBody is present and set to "true" ---
+// The policy must validate the request body against the OpenAPI schema.
 
-const xpath = require('xpath');
+const vmbNode = SecurityLib.getFirstNode(
+    '/OASValidation/Options/ValidateMessageBody',
+    el
+);
 
-const { getPreFlowRequestSteps, getFlowRequestSteps } =
-    require('./lib/security-lib');
+if (!vmbNode) {
+    compliant = false;
 
-const { stepUsesJSON } =
-    require('./JSONThreatProtection');
-
-const { stepUsesXML } =
-    require('./XMLThreatProtection');
-
-const ruleId = 'EX-CS004';
-
-const plugin = {
-    ruleId,
-    name: 'Detect Unknown Payload Format',
-    message:
-        'Unable to detect JSON or XML usage indicators. Manual verification may be required.',
-    fatal: false,
-    severity: 1,
-    nodeType: 'ProxyEndpoint',
-    enabled: true
-};
-
-/**
- * Main plugin entry point executed for each ProxyEndpoint.
- *
- * Logic:
- * - Detect JSON usage indicators
- * - Detect XML usage indicators
- * - If neither is detected → WARNING
- *
- * This plugin only analyses request flows.
- *
- * @param {Object} endpoint - Apigee ProxyEndpoint object
- * @param {Function} cb - Callback function
- * @returns {void}
- */
-const onProxyEndpoint = function (endpoint, cb) {
-
-    let hasJSON = false;
-    let hasXML = false;
-
-    // ===== PRE-FLOW CHECK =====
-
-    const preFlowSteps = getPreFlowRequestSteps(endpoint) || [];
-
-    preFlowSteps.forEach(step => {
-
-        if (stepUsesJSON(endpoint, step)) {
-            hasJSON = true;
-        }
-
-        if (stepUsesXML(endpoint, step)) {
-            hasXML = true;
-        }
+    policy.addMessage({
+        plugin: plugin,
+        line: el.lineNumber,
+        column: el.columnNumber,
+        message:
+            'Missing required element "Options/ValidateMessageBody" in policy "OAS-Validation". ' +
+            'It must be set to "true" to validate request body against the OpenAPI schema.',
     });
+} else {
+    const vmbValue = SecurityLib.getNodeText(vmbNode)
+        .toLowerCase();
 
-    // ===== FLOW CHECK =====
+    if (vmbValue !== 'true') {
+        compliant = false;
 
-    const flows = endpoint.getFlows();
-
-    flows.forEach(flow => {
-
-        const steps = getFlowRequestSteps(flow) || [];
-
-        steps.forEach(step => {
-
-            if (stepUsesJSON(endpoint, step)) {
-                hasJSON = true;
-            }
-
-            if (stepUsesXML(endpoint, step)) {
-                hasXML = true;
-            }
-        });
-    });
-
-    // ===== REPORT =====
-
-    if (!hasJSON && !hasXML) {
-
-        endpoint.addMessage({
-            plugin,
-            line: endpoint.getElement().lineNumber,
-            column: endpoint.getElement().columnNumber,
+        policy.addMessage({
+            plugin: plugin,
+            line: vmbNode.lineNumber,
+            column: vmbNode.columnNumber,
             message:
-                'No JSON or XML usage indicators were detected in request flows. Manual verification may be required.'
+                'Misconfigured OASValidation policy: ' +
+                '"Options/ValidateMessageBody" must be "true" ' +
+                `(currently "${vmbValue || 'empty'}").`,
         });
-
-        return cb(null, true);
     }
+}
 
-    return cb(null, false);
-};
 
-module.exports = {
-    plugin,
-    onProxyEndpoint
-};
+// --- Block 2: Validate AllowUnspecifiedParameters ---
+// Query must be "false" (error)
+// Cookie should be "false" (warning)
+// Header is ignored
+
+const aupNode = SecurityLib.getFirstNode(
+    '/OASValidation/Options/AllowUnspecifiedParameters',
+    el
+);
+
+if (!aupNode) {
+    compliant = false;
+
+    policy.addMessage({
+        plugin: plugin,
+        line: el.lineNumber,
+        column: el.columnNumber,
+        message:
+            'Missing required element "Options/AllowUnspecifiedParameters" in policy "OAS-Validation". ' +
+            'Requires explicit "Query" configuration.',
+    });
+
+} else {
+
+    ['Query', 'Cookie'].forEach((tag) => {
+
+        const node = SecurityLib.getFirstNode(
+            `/OASValidation/Options/AllowUnspecifiedParameters/${tag}`,
+            el
+        );
+
+        if (!node) {
+
+            if (tag === 'Query') {
+
+                compliant = false;
+
+                policy.addMessage({
+                    plugin: plugin,
+                    line: aupNode.lineNumber,
+                    column: aupNode.columnNumber,
+                    message:
+                        'OASValidation missing required parameter: ' +
+                        '"AllowUnspecifiedParameters/Query".',
+                });
+
+            } else if (tag === 'Cookie') {
+
+                policy.addMessage({
+                    plugin: warningPlugin,
+                    line: aupNode.lineNumber,
+                    column: aupNode.columnNumber,
+                    message:
+                        'OASValidation recommendation: ' +
+                        'Missing parameter "AllowUnspecifiedParameters/Cookie".',
+                });
+            }
+
+            return;
+        }
+
+        const value = SecurityLib.getNodeText(node)
+            .toLowerCase();
+
+        if (value !== 'false') {
+
+            if (tag === 'Query') {
+
+                compliant = false;
+
+                policy.addMessage({
+                    plugin: plugin,
+                    line: node.lineNumber,
+                    column: node.columnNumber,
+                    message:
+                        'Misconfigured OASValidation policy: ' +
+                        '"Options/AllowUnspecifiedParameters/Query" must be "false". ' +
+                        `(currently "${value || 'empty'}").`,
+                });
+
+            } else if (tag === 'Cookie') {
+
+                policy.addMessage({
+                    plugin: warningPlugin,
+                    line: node.lineNumber,
+                    column: node.columnNumber,
+                    message:
+                        'OASValidation recommendation: ' +
+                        '"Options/AllowUnspecifiedParameters/Cookie" should be set to "false". ' +
+                        `(currently "${value || 'empty'}").`,
+                });
+            }
+        }
+    });
+}
