@@ -1,133 +1,103 @@
-// --- Block 1: Ensure ValidateMessageBody is present and set to "true" ---
-// The policy must validate the request body against the OpenAPI schema.
+const configCheckCallback = function (policy) {
 
-const vmbNode = getFirstNode(
-    '/OASValidation/Options/ValidateMessageBody',
-    el
-);
+    let compliant = true;
+    const el = policy.getElement();
 
-if (!vmbNode) {
-    compliant = false;
+    // --- Block 1: Ensure ResourceURL exists
+    // Why: Without ResourceURL the policy only checks well-formed XML/JSON.
 
-    policy.addMessage({
-        plugin: plugin,
-        line: el.lineNumber,
-        column: el.columnNumber,
-        message:
-            'Missing required element "Options/ValidateMessageBody" in policy "OAS-Validation". ' +
-            'It must be set to "true" to validate request body against the OpenAPI schema.',
-    });
-} else {
-    const vmbValue = getNodeText(vmbNode)
-        .toLowerCase();
+    const resourceNode = getFirstNode('/MessageValidation/ResourceURL', el);
 
-    if (vmbValue !== 'true') {
+    if (!resourceNode) {
         compliant = false;
 
         policy.addMessage({
-            plugin: plugin,
-            line: vmbNode.lineNumber,
-            column: vmbNode.columnNumber,
+            plugin,
+            line: el.lineNumber,
+            column: el.columnNumber,
             message:
-                'Misconfigured OASValidation policy: ' +
-                '"Options/ValidateMessageBody" must be "true" ' +
-                `(currently "${vmbValue || 'empty'}").`,
+                `Missing required element "ResourceURL" in MessageValidation policy "${policy.getName()}". ` +
+                `Schema validation requires a ResourceURL referencing an XSD or WSDL.`,
+        });
+
+        return compliant;
+    }
+
+    // --- Block 2: Ensure ResourceURL uses xsd:// or wsdl://
+    // Why: Only these resource types enable schema validation.
+
+    const resourceValue = getNodeText(resourceNode)
+        .trim()
+        .toLowerCase();
+
+    if (
+        !resourceValue.startsWith('xsd://') &&
+        !resourceValue.startsWith('wsdl://')
+    ) {
+        compliant = false;
+
+        policy.addMessage({
+            plugin,
+            line: resourceNode.lineNumber,
+            column: resourceNode.columnNumber,
+            message:
+                `Invalid ResourceURL "${resourceValue}" in MessageValidation policy "${policy.getName()}". ` +
+                `ResourceURL must start with "xsd://" or "wsdl://".`,
         });
     }
-}
 
-// --- Block 2: Validate AllowUnspecifiedParameters ---
-// Query must be "false" (error)
-// Cookie should be "false" (warning)
-// Header is ignored
+    // --- Block 3: Validate SOAPMessage and Element when using WSDL
+    // Why: SOAP validation requires SOAPMessage version and Element target.
 
-const aupNode = getFirstNode(
-    '/OASValidation/Options/AllowUnspecifiedParameters',
-    el
-);
+    if (resourceValue.startsWith('wsdl://')) {
 
-if (!aupNode) {
-    compliant = false;
+        const soapNode = getFirstNode('/MessageValidation/SOAPMessage', el);
 
-    policy.addMessage({
-        plugin: plugin,
-        line: el.lineNumber,
-        column: el.columnNumber,
-        message:
-            'Missing required element "Options/AllowUnspecifiedParameters" in policy "OAS-Validation". ' +
-            'Requires explicit "Query" configuration.',
-    });
+        if (!soapNode) {
+            compliant = false;
 
-} else {
-
-    ['Query', 'Cookie'].forEach((tag) => {
-
-        const node = getFirstNode(
-            `/OASValidation/Options/AllowUnspecifiedParameters/${tag}`,
-            el
-        );
-
-        if (!node) {
-
-            if (tag === 'Query') {
-
-                compliant = false;
-
-                policy.addMessage({
-                    plugin: plugin,
-                    line: aupNode.lineNumber,
-                    column: aupNode.columnNumber,
-                    message:
-                        'OASValidation missing required parameter: ' +
-                        '"AllowUnspecifiedParameters/Query".',
-                });
-
-            } else if (tag === 'Cookie') {
-
-                policy.addMessage({
-                    plugin: warningPlugin,
-                    line: aupNode.lineNumber,
-                    column: aupNode.columnNumber,
-                    message:
-                        'OASValidation recommendation: ' +
-                        'Missing parameter "AllowUnspecifiedParameters/Cookie".',
-                });
-            }
-
-            return;
+            policy.addMessage({
+                plugin,
+                line: resourceNode.lineNumber,
+                column: resourceNode.columnNumber,
+                message:
+                    `Missing required element "SOAPMessage" for WSDL validation ` +
+                    `in policy "${policy.getName()}".`,
+            });
         }
 
-        const value = getNodeText(node)
-            .toLowerCase();
+        const elementNode = getFirstNode('/MessageValidation/Element', el);
 
-        if (value !== 'false') {
+        if (!elementNode) {
+            compliant = false;
 
-            if (tag === 'Query') {
-
-                compliant = false;
-
-                policy.addMessage({
-                    plugin: plugin,
-                    line: node.lineNumber,
-                    column: node.columnNumber,
-                    message:
-                        'Misconfigured OASValidation policy: ' +
-                        '"Options/AllowUnspecifiedParameters/Query" must be "false". ' +
-                        `(currently "${value || 'empty'}").`,
-                });
-
-            } else if (tag === 'Cookie') {
-
-                policy.addMessage({
-                    plugin: warningPlugin,
-                    line: node.lineNumber,
-                    column: node.columnNumber,
-                    message:
-                        'OASValidation recommendation: ' +
-                        '"Options/AllowUnspecifiedParameters/Cookie" should be set to "false". ' +
-                        `(currently "${value || 'empty'}").`,
-                });
-            }
+            policy.addMessage({
+                plugin,
+                line: resourceNode.lineNumber,
+                column: resourceNode.columnNumber,
+                message:
+                    `Missing required element "Element" in MessageValidation policy ` +
+                    `"${policy.getName()}" when using WSDL.`,
+            });
         }
-    });
-}
+    }
+
+    // --- Block 4: Recommend explicit Source element
+    // Why: Defining Source explicitly improves validation clarity.
+
+    const sourceNode = getFirstNode('/MessageValidation/Source', el);
+
+    if (!sourceNode) {
+
+        policy.addMessage({
+            plugin: warningPlugin,
+            line: el.lineNumber,
+            column: el.columnNumber,
+            message:
+                `MessageValidation recommendation: "Source" element should be explicitly defined ` +
+                `(request or response) in policy "${policy.getName()}".`,
+        });
+    }
+
+    return compliant;
+};
