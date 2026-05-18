@@ -1,103 +1,67 @@
-const configCheckCallback = function (policy) {
+const ruleId = 'EX-CS007';
 
-    let compliant = true;
-    const el = policy.getElement();
+const plugin = {
+    ruleId,
+    name: 'Data Schema Control',
+    message: 'API must implement schema validation (OASValidation or MessageValidation)',
+    fatal: false,
+    severity: 2,
+    nodeType: 'Bundle',
+    enabled: true,
+};
 
-    // --- Block 1: Ensure ResourceURL exists
-    // Why: Without ResourceURL the policy only checks well-formed XML/JSON.
+const BODY_METHOD_REGEX =
+    /request\.verb\s*(?:=|==)\s*["']?(POST|PUT|PATCH)["']?/i;
 
-    const resourceNode = getFirstNode('/MessageValidation/ResourceURL', el);
+const onBundle = (bundle, cb) => {
 
-    if (!resourceNode) {
-        compliant = false;
+    const policies = bundle.getPolicies();
 
-        policy.addMessage({
+    const hasOAS = policies.some(
+        p => p.getType() === 'OASValidation'
+    );
+
+    const hasMV = policies.some(
+        p => p.getType() === 'MessageValidation'
+    );
+
+    // Detect flows using body-based HTTP methods
+    const hasBodyMethod = bundle
+        .getProxyEndpoints()
+        .some(pe =>
+            pe.getFlows().some(flow => {
+                const condition = flow.getCondition();
+
+                if (!condition) {
+                    return false;
+                }
+
+                const expression = condition.getExpression() || '';
+
+                return BODY_METHOD_REGEX.test(expression);
+            })
+        );
+
+    // SOAP/XML APIs may legitimately only use GET
+    if (hasMV && !hasBodyMethod) {
+        return cb(null, false);
+    }
+
+    // No schema validation at all
+    if (!hasOAS && !hasMV) {
+
+        bundle.addMessage({
             plugin,
-            line: el.lineNumber,
-            column: el.columnNumber,
             message:
-                `Missing required element "ResourceURL" in MessageValidation policy "${policy.getName()}". ` +
-                `Schema validation requires a ResourceURL referencing an XSD or WSDL.`,
-        });
-
-        return compliant;
-    }
-
-    // --- Block 2: Ensure ResourceURL uses xsd:// or wsdl://
-    // Why: Only these resource types enable schema validation.
-
-    const resourceValue = getNodeText(resourceNode)
-        .trim()
-        .toLowerCase();
-
-    if (
-        !resourceValue.startsWith('xsd://') &&
-        !resourceValue.startsWith('wsdl://')
-    ) {
-        compliant = false;
-
-        policy.addMessage({
-            plugin,
-            line: resourceNode.lineNumber,
-            column: resourceNode.columnNumber,
-            message:
-                `Invalid ResourceURL "${resourceValue}" in MessageValidation policy "${policy.getName()}". ` +
-                `ResourceURL must start with "xsd://" or "wsdl://".`,
+                'Missing schema validation policy: API must implement either ' +
+                'OASValidation (REST) or MessageValidation (SOAP/XML).',
         });
     }
 
-    // --- Block 3: Validate SOAPMessage and Element when using WSDL
-    // Why: SOAP validation requires SOAPMessage version and Element target.
+    cb(null, false);
+};
 
-    if (resourceValue.startsWith('wsdl://')) {
-
-        const soapNode = getFirstNode('/MessageValidation/SOAPMessage', el);
-
-        if (!soapNode) {
-            compliant = false;
-
-            policy.addMessage({
-                plugin,
-                line: resourceNode.lineNumber,
-                column: resourceNode.columnNumber,
-                message:
-                    `Missing required element "SOAPMessage" for WSDL validation ` +
-                    `in policy "${policy.getName()}".`,
-            });
-        }
-
-        const elementNode = getFirstNode('/MessageValidation/Element', el);
-
-        if (!elementNode) {
-            compliant = false;
-
-            policy.addMessage({
-                plugin,
-                line: resourceNode.lineNumber,
-                column: resourceNode.columnNumber,
-                message:
-                    `Missing required element "Element" in MessageValidation policy ` +
-                    `"${policy.getName()}" when using WSDL.`,
-            });
-        }
-    }
-
-    // --- Block 4: Recommend explicit Source element
-    // Why: Defining Source explicitly improves validation clarity.
-
-    const sourceNode = getFirstNode('/MessageValidation/Source', el);
-
-    if (!sourceNode) {
-
-        policy.addMessage({
-            plugin: warningPlugin,
-            line: el.lineNumber,
-            column: el.columnNumber,
-            message:
-                `MessageValidation recommendation: "Source" element should be explicitly defined ` +
-                `(request or response) in policy "${policy.getName()}".`,
-        });
-    }
-
-    return compliant;
+module.exports = {
+    plugin,
+    onBundle,
 };
