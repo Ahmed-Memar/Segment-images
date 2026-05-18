@@ -1,7 +1,7 @@
 // --- Block 1: Ensure ValidateMessageBody is present and set to "true" ---
 // The policy must validate the request body against the OpenAPI schema.
 
-const vmbNode = SecurityLib.getFirstNode(
+const vmbNode = getFirstNode(
     '/OASValidation/Options/ValidateMessageBody',
     el
 );
@@ -18,7 +18,7 @@ if (!vmbNode) {
             'It must be set to "true" to validate request body against the OpenAPI schema.',
     });
 } else {
-    const vmbValue = SecurityLib.getNodeText(vmbNode)
+    const vmbValue = getNodeText(vmbNode)
         .toLowerCase();
 
     if (vmbValue !== 'true') {
@@ -36,13 +36,12 @@ if (!vmbNode) {
     }
 }
 
-
 // --- Block 2: Validate AllowUnspecifiedParameters ---
 // Query must be "false" (error)
 // Cookie should be "false" (warning)
 // Header is ignored
 
-const aupNode = SecurityLib.getFirstNode(
+const aupNode = getFirstNode(
     '/OASValidation/Options/AllowUnspecifiedParameters',
     el
 );
@@ -63,7 +62,7 @@ if (!aupNode) {
 
     ['Query', 'Cookie'].forEach((tag) => {
 
-        const node = SecurityLib.getFirstNode(
+        const node = getFirstNode(
             `/OASValidation/Options/AllowUnspecifiedParameters/${tag}`,
             el
         );
@@ -98,7 +97,7 @@ if (!aupNode) {
             return;
         }
 
-        const value = SecurityLib.getNodeText(node)
+        const value = getNodeText(node)
             .toLowerCase();
 
         if (value !== 'false') {
