@@ -4,17 +4,20 @@ from collections import defaultdict
 
 FOLDER_PATH = "results_json"
 
-TARGET_RULES = {
-    "EX-CS002",
-    "EX-CS003",
-    "EX-CS004",
-    "EX-CS005",
-    "EX-CS006",
-    "EX-CS007",
-    "EX-CS008",
-    "EX-CS009",
-    "EX-CS010"
+# Mapping ruleId -> nom complet plugin
+PLUGIN_NAMES = {
+    "EX-CS002": "EX-CS002-CheckJSONThreatProtection",
+    "EX-CS003": "EX-CS003-CheckXMLThreatProtection",
+    "EX-CS004": "EX-CS004-CheckSpikeArrest",
+    "EX-CS005": "EX-CS005-CheckOASValidation",
+    "EX-CS006": "EX-CS006-CheckSOAPMessageValidation",
+    "EX-CS007": "EX-CS007-DataSchemaControl",
+    "EX-CS008": "EX-CS008-CheckHTTPMethodControl",
+    "EX-CS009": "EX-CS009-CheckAccessTokenControl",
+    "EX-CS010": "EX-CS010-DetectApiPayloadFormat"
 }
+
+TARGET_RULES = set(PLUGIN_NAMES.keys())
 
 plugin_stats = defaultdict(lambda: {
     "fail": 0,
@@ -81,8 +84,9 @@ for rule in sorted(TARGET_RULES):
     stats = plugin_stats[rule]
     total = stats["fail"] + stats["warning"]
     impacted_apis = sorted(stats["apis"])
+    plugin_name = PLUGIN_NAMES[rule]
 
-    print(f"{rule}")
+    print(f"{plugin_name}")
     print(f"  FAIL: {stats['fail']}")
     print(f"  WARNING: {stats['warning']}")
     print(f"  TOTAL: {total}")
