@@ -22,7 +22,13 @@ TARGET_RULES = set(PLUGIN_NAMES.keys())
 plugin_stats = defaultdict(lambda: {
     "fail": 0,
     "warning": 0,
-    "apis": set()
+    "apis": set(),
+
+    # stats détaillées par API
+    "api_details": defaultdict(lambda: {
+        "fail": 0,
+        "warning": 0
+    })
 })
 
 # Stocker toutes les APIs analysées
@@ -45,10 +51,15 @@ def process_entry(entry, filename):
                 severity = msg.get("severity")
 
                 if rule_id in TARGET_RULES:
+
+                    # stats globales
                     if severity == 2:
                         plugin_stats[rule_id]["fail"] += 1
+                        plugin_stats[rule_id]["api_details"][api_name]["fail"] += 1
+
                     elif severity == 1:
                         plugin_stats[rule_id]["warning"] += 1
+                        plugin_stats[rule_id]["api_details"][api_name]["warning"] += 1
 
                     plugin_stats[rule_id]["apis"].add(api_name)
 
@@ -95,7 +106,28 @@ for rule in sorted(TARGET_RULES):
     # Afficher les noms seulement si <= 12
     if 0 < len(impacted_apis) <= 12:
         print("  Noms des APIs impactees:")
+
         for api in impacted_apis:
-            print(f"    - {api}")
+            fail_count = stats["api_details"][api]["fail"]
+            warning_count = stats["api_details"][api]["warning"]
+            total_api = fail_count + warning_count
+
+            # Si une seule remarque → afficher juste le nom
+            if total_api == 1:
+                print(f"    - {api}")
+
+            # Sinon afficher détails
+            else:
+                details = []
+
+                if fail_count > 0:
+                    details.append(f"{fail_count} FAIL")
+
+                if warning_count > 0:
+                    details.append(f"{warning_count} WARNING")
+
+                details_str = ", ".join(details)
+
+                print(f"    - {api} ({details_str})")
 
     print()
