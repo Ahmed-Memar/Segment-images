@@ -1,1 +1,1 @@
-message: `Flow "${flow.name}" may process a request body, but no JSON or XML payload usage indicators were detected. Manual verification recommended.`
+Flow "${flow.name}" may process a request body, but no JSON or XML payload usage indicators were detected, so JSON/XML threat protection could not be verified automatically. Manual verification recommended.
