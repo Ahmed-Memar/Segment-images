@@ -1,18 +1,28 @@
-message: 'JSON/XML threat protection could not be verified automatically.'
+const xpath = require('xpath');
 
+const configCheckCallback = function(policy) {
+    let compliant = true;
 
-/**
- * Checks whether a flow condition indicates
- * an HTTP method that usually carries a request body.
- *
- * Supported methods: POST, PUT, PATCH
- *
- * @param {string} condition - Flow condition expression
- * @returns {boolean}
- */
-function mayContainRequestBody(condition) {
-  return BODY_METHOD_REGEX.test(condition || '');
+    let item = xpath.select('/SpikeArrest/Rate', policy.getElement());
+
+    if (item.length == 0) {
+        compliant = false;
+        policy.addMessage({
+            plugin: plugin,
+            line: policy.getElement().lineNumber,
+            column: policy.getElement().columnNumber,
+            message: `Required SpikeArrest configuration "Rate" not found for "${policy.getName()}".`
+        });
+    }
+
+    return compliant;
 }
 
 
-// Reuse JSON/XML detection logic from threat protection plugins
+
+let checker = new SecurityLib.PolicyChecker(
+    plugin,
+    'SpikeArrest',
+    debug,
+    configCheckCallback
+);
