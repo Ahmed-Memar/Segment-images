@@ -1,13 +1,23 @@
-message: `Step "${policy.getName()}" uses JSON but no JSONThreatProtection policy is applied`
+return {
+    usesJson: true,
+    severity: 'error',
+    message: 'uses JSON but no JSONThreatProtection policy is applied'
+};
 
-
-
-message: `Step "${policy.getName()}" uses JSON from an unknown source but no JSONThreatProtection policy is applied`
-
-
-
+return {
+    usesJson: true,
+    severity: 'warning',
+    message: 'uses JSON from unknown source but no JSONThreatProtection policy is applied'
+};
 
 message:
-    r.analysis.severity === 'warning'
-        ? `Step "${getStepName(r.step)}" uses JSON from an unknown source but no JSONThreatProtection policy is applied`
-        : `Step "${getStepName(r.step)}" uses JSON but no JSONThreatProtection policy is applied`
+    `Flow "${flow.name}" is not compliant: ` +
+    `Step "${getStepName(detail.step)}" ${detail.message}`
+
+details: jsonSteps.map(r => ({
+    step: r.step,
+    line: r.step.lineNumber,
+    column: r.step.columnNumber,
+    severity: r.analysis.severity,
+    message: r.analysis.message
+}))
