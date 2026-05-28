@@ -1,125 +1,90 @@
-const buildVariableRegistry = function(endpoint) {
-    const registry = {
-        serviceCalloutResponses: new Set(),
-        ignoredVariables: new Set([
-            'response',
-            'message',
-            'request'
-        ])
-    };
+const classifySource = function (source, registry) {
 
-    const steps = [
-        ...getPreFlowRequestSteps(endpoint),
-        ...getFlowRequestSteps(endpoint)
-            .flatMap(flow => getFlowRequestSteps(flow) || [])
-    ];
+    const normalized = source.trim();
 
-    steps.forEach(step => {
-        const policy = getPolicyFromStep(endpoint, step);
-        if (!policy) return;
+    // ===== ERROR =====
 
-        // ServiceCallout
-        if (policy.getType() === 'ServiceCallout') {
-            const responseNode = getFirstNode(
-                '/ServiceCallout/Response',
-                policy.getElement()
-            );
+    if (
+        normalized === 'message' ||
+        normalized === 'message.content' ||
+        normalized === 'request' ||
+        normalized.startsWith('request.')
+    ) {
+        return {
+            usesJson: true,
+            severity: 'error'
+        };
+    }
 
-            if (responseNode) {
-                const responseVar = getNodeText(responseNode);
+    // ===== IGNORE =====
 
-                if (responseVar) {
-                    registry.serviceCalloutResponses.add(responseVar);
-                }
-            }
+    if (
+        normalized === 'response' ||
+        normalized.startsWith('response.') ||
+        normalized.startsWith('AccessEntity.') ||
+        normalized.startsWith('private.') ||
+        normalized.startsWith('oauthv2.')
+    ) {
+        return {
+            usesJson: true,
+            severity: 'ignore'
+        };
+    }
+
+    // ===== Registry lookup =====
+
+    const baseVariable = normalized.split('.')[0];
+
+    const registryEntry = registry[baseVariable];
+
+    if (registryEntry) {
+
+        if (registryEntry.trust === 'internal') {
+
+            return {
+                usesJson: true,
+                severity: 'ignore'
+            };
         }
-    });
 
-    return registry;
-};
+        if (registryEntry.trust === 'external') {
 
+            return {
+                usesJson: true,
+                severity: 'error'
+            };
+        }
 
-
-
-
-
-
-
-
-const classifySource = function(source, registry) {
-
-    // Missing source => request/message by default
-    if (!source) {
         return {
-            shouldCheck: true,
-            unknown: false
+            usesJson: true,
+            severity: 'warning'
         };
     }
 
-    const normalizedSource = source.trim();
+    // ===== Unknown =====
 
-    // Direct request sources
-    if (
-        normalizedSource === 'request' ||
-        normalizedSource.startsWith('request.') ||
-        normalizedSource === 'message' ||
-        normalizedSource.startsWith('message.')
-    ) {
-        return {
-            shouldCheck: true,
-            unknown: false
-        };
-    }
-
-    // Explicit safe sources
-    if (
-        normalizedSource === 'response' ||
-        normalizedSource.startsWith('response.') ||
-        normalizedSource.startsWith('AccessEntity.') ||
-        normalizedSource.startsWith('private.') ||
-        normalizedSource.startsWith('oauthv2.')
-    ) {
-        return {
-            shouldCheck: false,
-            unknown: false
-        };
-    }
-
-    // Custom variable
-    const baseVar = normalizedSource.split('.')[0];
-
-    // Known ServiceCallout response
-    if (registry.serviceCalloutResponses.has(baseVar)) {
-        return {
-            shouldCheck: false,
-            unknown: false
-        };
-    }
-
-    // Unknown source
     return {
-        shouldCheck: false,
-        unknown: true
+        usesJson: true,
+        severity: 'warning'
     };
 };
 
 
 
 
-
-
-
-const stepUsesJSON = function(endpoint, step, registry) {
+const stepUsesJSON = function (endpoint, step, registry) {
 
     const policy = getPolicyFromStep(endpoint, step);
 
     if (!policy) {
+
         return {
             usesJson: false
         };
     }
 
     // ===== ExtractVariables =====
+
     if (policy.getType() === 'ExtractVariables') {
 
         const jsonPayload = getFirstNode(
@@ -128,6 +93,7 @@ const stepUsesJSON = function(endpoint, step, registry) {
         );
 
         if (!jsonPayload) {
+
             return {
                 usesJson: false
             };
@@ -138,33 +104,26 @@ const stepUsesJSON = function(endpoint, step, registry) {
             policy.getElement()
         );
 
+        // Default source = message
         const source = sourceNode
-            ? getNodeText(sourceNode)
-            : null;
+            ? getNodeText(sourceNode).trim()
+            : 'message';
 
-        const analysis = classifySource(source, registry);
-
-        if (!analysis.shouldCheck && !analysis.unknown) {
-            return {
-                usesJson: false
-            };
-        }
-
-        return {
-            usesJson: true,
-            unknown: analysis.unknown
-        };
+        return classifySource(source, registry);
     }
 
-    // ===== JSON transformation policies =====
+    // ===== JSON transformation =====
+
     if (['JSONToXML'].includes(policy.getType())) {
+
         return {
             usesJson: true,
-            unknown: false
+            severity: 'error'
         };
     }
 
-    // ===== AssignMessage with JSON Content-Type =====
+    // ===== AssignMessage =====
+
     if (policy.getType() === 'AssignMessage') {
 
         const headers = xpath.select(
@@ -172,15 +131,22 @@ const stepUsesJSON = function(endpoint, step, registry) {
             policy.getElement()
         );
 
-        const hasJsonHeader = headers.some(h =>
+        const usesJson = headers.some(h =>
             getNodeText(h)
                 .toLowerCase()
                 .includes('application/json')
         );
 
+        if (!usesJson) {
+
+            return {
+                usesJson: false
+            };
+        }
+
         return {
-            usesJson: hasJsonHeader,
-            unknown: false
+            usesJson: true,
+            severity: 'warning'
         };
     }
 
@@ -192,16 +158,13 @@ const stepUsesJSON = function(endpoint, step, registry) {
 
 
 
-
-
-
-const onProxyEndpoint = function(endpoint, cb) {
+const onProxyEndpoint = function (endpoint, cb) {
 
     debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
 
     let hasIssue = false;
 
-    const registry = buildVariableRegistry(endpoint);
+    const variableRegistry = buildVariableRegistry(endpoint);
 
     // ===== PRE-FLOW CHECK =====
 
@@ -213,10 +176,11 @@ const onProxyEndpoint = function(endpoint, cb) {
         'JSONThreatProtection'
     );
 
-    // Global protection exists
+    // Global protection already exists
     if (preFlowJTP.length > 0) {
 
         preFlowJTP.forEach(policy => {
+
             if (!configCheckCallback(policy)) {
                 hasIssue = true;
             }
@@ -225,32 +189,42 @@ const onProxyEndpoint = function(endpoint, cb) {
         return cb(null, hasIssue);
     }
 
-    // Detect JSON usage
-    const preFlowJsonResults = preFlowSteps
+    const preFlowJsonSteps = preFlowSteps
         .map(step => ({
-            step,
-            analysis: stepUsesJSON(endpoint, step, registry)
+            stepName: getStepName(step),
+            line: step.lineNumber,
+            column: step.columnNumber,
+            analysis: stepUsesJSON(
+                endpoint,
+                step,
+                variableRegistry
+            )
         }))
-        .filter(r => r.analysis.usesJson);
+        .filter(r =>
+            r.analysis.usesJson &&
+            r.analysis.severity !== 'ignore'
+        );
 
-    if (preFlowJsonResults.length > 0) {
+    if (preFlowJsonSteps.length > 0) {
 
         hasIssue = true;
 
-        preFlowJsonResults.forEach(r => {
+        preFlowJsonSteps.forEach(r => {
+
+            const usedPlugin =
+                r.analysis.severity === 'warning'
+                    ? warningPlugin
+                    : plugin;
 
             endpoint.addMessage({
-                plugin,
-                line: r.step.lineNumber,
-                column: r.step.columnNumber,
+                plugin: usedPlugin,
+                line: r.line,
+                column: r.column,
                 message:
                     `PreFlow is not compliant: ` +
-                    `Step "${getStepName(r.step)}" ` +
-                    (r.analysis.unknown
-                        ? 'uses JSON from unknown source but no JSONThreatProtection policy is applied'
-                        : 'uses JSON but no JSONThreatProtection policy is applied')
+                    `Step "${r.stepName}" uses JSON ` +
+                    `but no JSONThreatProtection policy is applied`
             });
-
         });
     }
 
@@ -260,14 +234,24 @@ const onProxyEndpoint = function(endpoint, cb) {
 
         const steps = getFlowRequestSteps(flow) || [];
 
-        const jsonResults = steps
+        const jsonSteps = steps
             .map(step => ({
-                step,
-                analysis: stepUsesJSON(endpoint, step, registry)
+                stepName: getStepName(step),
+                line: step.lineNumber,
+                column: step.columnNumber,
+                analysis: stepUsesJSON(
+                    endpoint,
+                    step,
+                    variableRegistry
+                )
             }))
-            .filter(r => r.analysis.usesJson);
+            .filter(r =>
+                r.analysis.usesJson &&
+                r.analysis.severity !== 'ignore'
+            );
 
-        if (jsonResults.length === 0) {
+        if (jsonSteps.length === 0) {
+
             return {
                 isValid: true,
                 details: []
@@ -280,23 +264,26 @@ const onProxyEndpoint = function(endpoint, cb) {
             'JSONThreatProtection'
         );
 
-        // Missing protection
+        // ===== Missing protection =====
+
         if (jtpPolicies.length === 0) {
 
             return {
                 isValid: false,
-                details: jsonResults.map(r => ({
-                    stepName: getStepName(r.step),
-                    line: r.step.lineNumber,
-                    column: r.step.columnNumber,
-                    message: r.analysis.unknown
-                        ? 'uses JSON from unknown source but no JSONThreatProtection policy is applied'
-                        : 'uses JSON but no JSONThreatProtection policy is applied'
+                details: jsonSteps.map(r => ({
+                    line: r.line,
+                    column: r.column,
+                    severity: r.analysis.severity,
+                    stepName: r.stepName,
+                    message:
+                        `uses JSON but no ` +
+                        `JSONThreatProtection policy is applied`
                 }))
             };
         }
 
-        // Invalid configuration
+        // ===== Invalid configuration =====
+
         const configValid = jtpPolicies.every(policy =>
             configCheckCallback(policy)
         );
@@ -308,9 +295,10 @@ const onProxyEndpoint = function(endpoint, cb) {
                 : jtpPolicies.map(policy => ({
                     line: flow.lineNumber,
                     column: flow.columnNumber,
+                    severity: 'error',
                     message:
                         `Policy "${policy.getName()}" ` +
-                        'has invalid JSONThreatProtection configuration'
+                        `has invalid JSONThreatProtection configuration`
                 }))
         };
     });
@@ -323,21 +311,25 @@ const onProxyEndpoint = function(endpoint, cb) {
 
         invalidFlows.forEach(flow => {
 
-            const messages = flow.details.map(d =>
-                d.stepName
-                    ? `Step "${d.stepName}" ${d.message}`
-                    : d.message
-            );
+            flow.details.forEach(detail => {
 
-            endpoint.addMessage({
-                plugin,
-                line: flow.line,
-                column: flow.column,
-                message:
-                    `Flow "${flow.name}" is not compliant: ` +
-                    messages.join(' AND ')
+                const usedPlugin =
+                    detail.severity === 'warning'
+                        ? warningPlugin
+                        : plugin;
+
+                endpoint.addMessage({
+                    plugin: usedPlugin,
+                    line: detail.line,
+                    column: detail.column,
+                    message:
+                        detail.stepName
+                            ? `Flow "${flow.name}" is not compliant: ` +
+                              `Step "${detail.stepName}" ${detail.message}`
+                            : `Flow "${flow.name}" is not compliant: ` +
+                              `${detail.message}`
+                });
             });
-
         });
     }
 
