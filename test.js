@@ -1,37 +1,136 @@
-/**
- * Determines whether a given Step uses JSON processing
- * and whether JSONThreatProtection validation is required.
- *
- * Rules:
- * - request / request.* / message / message.content / missing source => protected
- * - response / response.* => ignored
- * - private.* / AccessEntity.* / oauthv2.* => ignored
- * - ServiceCallout response variables:
- *      - hardcoded external URL => protected
- *      - otherwise => ignored
- * - unknown custom variables => warning only
- *
- * @param {Object} endpoint - Apigee endpoint object
- * @param {Node} step - XML Step node
- *
- * @returns {Object|null}
- */
-const analyzeJSONUsage = function (endpoint, step) {
+const buildVariableRegistry = function(endpoint) {
+    const registry = {
+        serviceCalloutResponses: new Set(),
+        ignoredVariables: new Set([
+            'response',
+            'message',
+            'request'
+        ])
+    };
+
+    const steps = [
+        ...getPreFlowRequestSteps(endpoint),
+        ...getFlowRequestSteps(endpoint)
+            .flatMap(flow => getFlowRequestSteps(flow) || [])
+    ];
+
+    steps.forEach(step => {
+        const policy = getPolicyFromStep(endpoint, step);
+        if (!policy) return;
+
+        // ServiceCallout
+        if (policy.getType() === 'ServiceCallout') {
+            const responseNode = getFirstNode(
+                '/ServiceCallout/Response',
+                policy.getElement()
+            );
+
+            if (responseNode) {
+                const responseVar = getNodeText(responseNode);
+
+                if (responseVar) {
+                    registry.serviceCalloutResponses.add(responseVar);
+                }
+            }
+        }
+    });
+
+    return registry;
+};
+
+
+
+
+
+
+
+
+
+const classifySource = function(source, registry) {
+
+    // Missing source => request/message by default
+    if (!source) {
+        return {
+            shouldCheck: true,
+            unknown: false
+        };
+    }
+
+    const normalizedSource = source.trim();
+
+    // Direct request sources
+    if (
+        normalizedSource === 'request' ||
+        normalizedSource.startsWith('request.') ||
+        normalizedSource === 'message' ||
+        normalizedSource.startsWith('message.')
+    ) {
+        return {
+            shouldCheck: true,
+            unknown: false
+        };
+    }
+
+    // Explicit safe sources
+    if (
+        normalizedSource === 'response' ||
+        normalizedSource.startsWith('response.') ||
+        normalizedSource.startsWith('AccessEntity.') ||
+        normalizedSource.startsWith('private.') ||
+        normalizedSource.startsWith('oauthv2.')
+    ) {
+        return {
+            shouldCheck: false,
+            unknown: false
+        };
+    }
+
+    // Custom variable
+    const baseVar = normalizedSource.split('.')[0];
+
+    // Known ServiceCallout response
+    if (registry.serviceCalloutResponses.has(baseVar)) {
+        return {
+            shouldCheck: false,
+            unknown: false
+        };
+    }
+
+    // Unknown source
+    return {
+        shouldCheck: false,
+        unknown: true
+    };
+};
+
+
+
+
+
+
+
+const stepUsesJSON = function(endpoint, step, registry) {
+
     const policy = getPolicyFromStep(endpoint, step);
 
     if (!policy) {
-        return null;
+        return {
+            usesJson: false
+        };
     }
 
     // ===== ExtractVariables =====
     if (policy.getType() === 'ExtractVariables') {
+
         const jsonPayload = getFirstNode(
             '/ExtractVariables/JSONPayload',
             policy.getElement()
         );
 
         if (!jsonPayload) {
-            return null;
+            return {
+                usesJson: false
+            };
         }
 
         const sourceNode = getFirstNode(
@@ -40,335 +139,207 @@ const analyzeJSONUsage = function (endpoint, step) {
         );
 
         const source = sourceNode
-            ? getNodeText(sourceNode).trim()
-            : '';
+            ? getNodeText(sourceNode)
+            : null;
 
-        // Missing source => request by default
-        if (!source) {
+        const analysis = classifySource(source, registry);
+
+        if (!analysis.shouldCheck && !analysis.unknown) {
             return {
-                requiresProtection: true,
-                severity: 'error',
-                details: [{
-                    stepName: getStepName(step),
-                    line: step.lineNumber,
-                    column: step.columnNumber,
-                    message:
-                        'uses JSON but no JSONThreatProtection policy is applied'
-                }]
+                usesJson: false
             };
         }
 
-        // request / message
-        if (
-            source === 'request' ||
-            source.startsWith('request.') ||
-            source === 'message' ||
-            source === 'message.content'
-        ) {
-            return {
-                requiresProtection: true,
-                severity: 'error',
-                details: [{
-                    stepName: getStepName(step),
-                    line: step.lineNumber,
-                    column: step.columnNumber,
-                    message:
-                        'uses JSON but no JSONThreatProtection policy is applied'
-                }]
-            };
-        }
-
-        // response => ignore
-        if (
-            source === 'response' ||
-            source.startsWith('response.')
-        ) {
-            return null;
-        }
-
-        // Internal variables => ignore
-        if (
-            source.startsWith('private.') ||
-            source.startsWith('AccessEntity.') ||
-            source.startsWith('oauthv2.')
-        ) {
-            return null;
-        }
-
-        // ===== ServiceCallout heuristic =====
-        const allPolicies = endpoint.getPolicies();
-
-        const matchingServiceCallout = allPolicies.find(p => {
-            if (p.getType() !== 'ServiceCallout') {
-                return false;
-            }
-
-            const responseNode = getFirstNode(
-                '/ServiceCallout/Response',
-                p.getElement()
-            );
-
-            if (!responseNode) {
-                return false;
-            }
-
-            return getNodeText(responseNode).trim() === source;
-        });
-
-        if (matchingServiceCallout) {
-            const targetUrlNode = getFirstNode(
-                '/ServiceCallout/HTTPTargetConnection/URL',
-                matchingServiceCallout.getElement()
-            );
-
-            if (targetUrlNode) {
-                const url = getNodeText(targetUrlNode).trim();
-
-                const isVariableUrl =
-                    url.includes('{') || url.includes('}');
-
-                const isInternal =
-                    url.includes('localhost') ||
-                    url.includes('.local') ||
-                    url.includes('.internal');
-
-                // Hardcoded external URL => ERROR
-                if (!isVariableUrl && !isInternal) {
-                    return {
-                        requiresProtection: true,
-                        severity: 'error',
-                        details: [{
-                            stepName: getStepName(step),
-                            line: step.lineNumber,
-                            column: step.columnNumber,
-                            message:
-                                'uses JSON but no JSONThreatProtection policy is applied'
-                        }]
-                    };
-                }
-            }
-
-            // Internal / variable-based ServiceCallout => ignore
-            return null;
-        }
-
-        // Unknown custom variable => warning
         return {
-            requiresProtection: false,
-            severity: 'warning',
-            details: [{
-                stepName: getStepName(step),
-                line: step.lineNumber,
-                column: step.columnNumber,
-                message:
-                    'uses JSON from unknown source but source origin cannot be determined'
-            }]
+            usesJson: true,
+            unknown: analysis.unknown
         };
     }
 
-    // ===== JSON Transformations =====
+    // ===== JSON transformation policies =====
     if (['JSONToXML'].includes(policy.getType())) {
         return {
-            requiresProtection: true,
-            severity: 'error',
-            details: [{
-                stepName: getStepName(step),
-                line: step.lineNumber,
-                column: step.columnNumber,
-                message:
-                    'uses JSON but no JSONThreatProtection policy is applied'
-            }]
+            usesJson: true,
+            unknown: false
         };
     }
 
-    // ===== AssignMessage =====
+    // ===== AssignMessage with JSON Content-Type =====
     if (policy.getType() === 'AssignMessage') {
+
         const headers = xpath.select(
             '/AssignMessage/Set/Headers/Header[@name="Content-Type" or @name="content-type"]',
             policy.getElement()
         );
 
-        const usesJson = headers.some(h =>
+        const hasJsonHeader = headers.some(h =>
             getNodeText(h)
                 .toLowerCase()
                 .includes('application/json')
         );
 
-        if (usesJson) {
-            return {
-                requiresProtection: true,
-                severity: 'error',
-                details: [{
-                    stepName: getStepName(step),
-                    line: step.lineNumber,
-                    column: step.columnNumber,
-                    message:
-                        'uses JSON but no JSONThreatProtection policy is applied'
-                }]
-            };
-        }
+        return {
+            usesJson: hasJsonHeader,
+            unknown: false
+        };
     }
 
-    return null;
+    return {
+        usesJson: false
+    };
 };
 
 
 
-// ===== PRE-FLOW CHECK =====
-
-const preFlowSteps = getPreFlowRequestSteps(endpoint) || [];
-
-const preFlowJTP = getPoliciesFromStepsByType(
-    endpoint,
-    preFlowSteps,
-    'JSONThreatProtection'
-);
-
-// If PreFlow has JTP -> global protection
-if (preFlowJTP.length > 0) {
-    preFlowJTP.forEach(policy => {
-        if (!configCheckCallback(policy)) {
-            hasIssue = true;
-        }
-    });
-
-    return cb(null, hasIssue);
-}
-
-const preFlowResults = preFlowSteps
-    .map(step => analyzeJSONUsage(endpoint, step))
-    .filter(Boolean);
-
-const preFlowProtected = preFlowResults.filter(
-    r => r.requiresProtection
-);
-
-const preFlowWarnings = preFlowResults.filter(
-    r => r.severity === 'warning'
-);
-
-// Errors
-if (preFlowProtected.length > 0) {
-    hasIssue = true;
-
-    preFlowProtected.forEach(r => {
-        r.details.forEach(detail => {
-            endpoint.addMessage({
-                plugin,
-                line: detail.line,
-                column: detail.column,
-                message:
-                    `PreFlow is not compliant: ` +
-                    `Step "${detail.stepName}" ${detail.message}`
-            });
-        });
-    });
-}
-
-// Warnings
-preFlowWarnings.forEach(r => {
-    r.details.forEach(detail => {
-        endpoint.addMessage({
-            plugin: warningPlugin,
-            line: detail.line,
-            column: detail.column,
-            message:
-                `PreFlow warning: ` +
-                `Step "${detail.stepName}" ${detail.message}`
-        });
-    });
-});
 
 
 
 
-// ===== FLOW CHECK =====
+const onProxyEndpoint = function(endpoint, cb) {
 
-const invalidFlows = findFlowsNotMatching(endpoint, (flow) => {
+    debug(`Inspecting proxy endpoint "${endpoint.getName()}"`);
 
-    const steps = getFlowRequestSteps(flow) || [];
+    let hasIssue = false;
 
-    const analysisResults = steps
-        .map(step => analyzeJSONUsage(endpoint, step))
-        .filter(Boolean);
+    const registry = buildVariableRegistry(endpoint);
 
-    const protectedResults = analysisResults.filter(
-        r => r.requiresProtection
-    );
+    // ===== PRE-FLOW CHECK =====
 
-    const warningResults = analysisResults.filter(
-        r => r.severity === 'warning'
-    );
+    const preFlowSteps = getPreFlowRequestSteps(endpoint) || [];
 
-    if (protectedResults.length === 0 &&
-        warningResults.length === 0) {
-        return {
-            isValid: true,
-            details: []
-        };
-    }
-
-    const jtpPolicies = getPoliciesFromStepsByType(
+    const preFlowJTP = getPoliciesFromStepsByType(
         endpoint,
-        steps,
+        preFlowSteps,
         'JSONThreatProtection'
     );
 
-    // Missing protection
-    if (protectedResults.length > 0 &&
-        jtpPolicies.length === 0) {
+    // Global protection exists
+    if (preFlowJTP.length > 0) {
 
-        return {
-            isValid: false,
-            details: protectedResults.flatMap(r => r.details)
-        };
+        preFlowJTP.forEach(policy => {
+            if (!configCheckCallback(policy)) {
+                hasIssue = true;
+            }
+        });
+
+        return cb(null, hasIssue);
     }
 
-    // Invalid configuration
-    const configValid = jtpPolicies.every(policy =>
-        configCheckCallback(policy)
-    );
+    // Detect JSON usage
+    const preFlowJsonResults = preFlowSteps
+        .map(step => ({
+            step,
+            analysis: stepUsesJSON(endpoint, step, registry)
+        }))
+        .filter(r => r.analysis.usesJson);
 
-    return {
-        isValid: configValid,
-        details: configValid
-            ? warningResults.flatMap(r => r.details)
-            : [{
-                line: flow.lineNumber,
-                column: flow.columnNumber,
+    if (preFlowJsonResults.length > 0) {
+
+        hasIssue = true;
+
+        preFlowJsonResults.forEach(r => {
+
+            endpoint.addMessage({
+                plugin,
+                line: r.step.lineNumber,
+                column: r.step.columnNumber,
                 message:
-                    'has invalid JSONThreatProtection configuration'
-            }]
-    };
-});
+                    `PreFlow is not compliant: ` +
+                    `Step "${getStepName(r.step)}" ` +
+                    (r.analysis.unknown
+                        ? 'uses JSON from unknown source but no JSONThreatProtection policy is applied'
+                        : 'uses JSON but no JSONThreatProtection policy is applied')
+            });
 
-
-
-
-// ===== REPORT =====
-
-if (invalidFlows.length > 0) {
-    hasIssue = true;
-
-    invalidFlows.forEach(flow => {
-
-        const messages = flow.details.map(d =>
-            d.stepName
-                ? `Step "${d.stepName}" ${d.message}`
-                : d.message
-        );
-
-        const hasWarningOnly = flow.details.every(d =>
-            d.message.includes('unknown source')
-        );
-
-        endpoint.addMessage({
-            plugin: hasWarningOnly ? warningPlugin : plugin,
-            line: flow.line,
-            column: flow.column,
-            message:
-                `Flow "${flow.name}" is not compliant: ` +
-                `${messages.join(' AND ')}`
         });
+    }
+
+    // ===== FLOW CHECK =====
+
+    const invalidFlows = findFlowsNotMatching(endpoint, (flow) => {
+
+        const steps = getFlowRequestSteps(flow) || [];
+
+        const jsonResults = steps
+            .map(step => ({
+                step,
+                analysis: stepUsesJSON(endpoint, step, registry)
+            }))
+            .filter(r => r.analysis.usesJson);
+
+        if (jsonResults.length === 0) {
+            return {
+                isValid: true,
+                details: []
+            };
+        }
+
+        const jtpPolicies = getPoliciesFromStepsByType(
+            endpoint,
+            steps,
+            'JSONThreatProtection'
+        );
+
+        // Missing protection
+        if (jtpPolicies.length === 0) {
+
+            return {
+                isValid: false,
+                details: jsonResults.map(r => ({
+                    stepName: getStepName(r.step),
+                    line: r.step.lineNumber,
+                    column: r.step.columnNumber,
+                    message: r.analysis.unknown
+                        ? 'uses JSON from unknown source but no JSONThreatProtection policy is applied'
+                        : 'uses JSON but no JSONThreatProtection policy is applied'
+                }))
+            };
+        }
+
+        // Invalid configuration
+        const configValid = jtpPolicies.every(policy =>
+            configCheckCallback(policy)
+        );
+
+        return {
+            isValid: configValid,
+            details: configValid
+                ? []
+                : jtpPolicies.map(policy => ({
+                    line: flow.lineNumber,
+                    column: flow.columnNumber,
+                    message:
+                        `Policy "${policy.getName()}" ` +
+                        'has invalid JSONThreatProtection configuration'
+                }))
+        };
     });
-}
+
+    // ===== REPORT =====
+
+    if (invalidFlows.length > 0) {
+
+        hasIssue = true;
+
+        invalidFlows.forEach(flow => {
+
+            const messages = flow.details.map(d =>
+                d.stepName
+                    ? `Step "${d.stepName}" ${d.message}`
+                    : d.message
+            );
+
+            endpoint.addMessage({
+                plugin,
+                line: flow.line,
+                column: flow.column,
+                message:
+                    `Flow "${flow.name}" is not compliant: ` +
+                    messages.join(' AND ')
+            });
+
+        });
+    }
+
+    return cb(null, hasIssue);
+};
