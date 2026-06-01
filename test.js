@@ -1,9 +1,7 @@
-const warningSteps = warningDetails.map(
-    detail =>
-        `Step "${detail.stepName}" uses JSON from source "${detail.source}"`
-);
-
 message:
-    `Flow "${flow.name}" may require manual review: ` +
-    `${warningSteps.join(' AND ')}; ` +
-    'it could not be determined automatically whether JSONThreatProtection is required'
+    r.analysis.severity === 'warning'
+        ? `PreFlow may require manual review: ` +
+          `Step "${r.stepName}" uses JSON from source "${r.analysis.source}"; ` +
+          'unable to determine automatically whether JSONThreatProtection is required'
+        : `PreFlow is not compliant: ` +
+          `Step "${r.stepName}" uses JSON but no JSONThreatProtection policy is applied`
