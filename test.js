@@ -1,16 +1,32 @@
-// ===== JSON transformation =====
+// ===== AssignMessage =====
 
-if (policy.getType() === 'JSONToXML') {
+if (policy.getType() === 'AssignMessage') {
 
-    const sourceNode = getFirstNode(
-        '/JSONToXML/Source',
+    const payloadNode = getFirstNode(
+        '/AssignMessage/Set/Payload',
         policy.getElement()
     );
 
-    // Default source = message
-    const source = sourceNode
-        ? getNodeText(sourceNode).trim()
-        : 'message';
+    if (!payloadNode) {
+        return {
+            usesJson: false
+        };
+    }
 
-    return classifySource(source, registry);
+    const contentType =
+        payloadNode.getAttribute &&
+        payloadNode.getAttribute('contentType')
+            ? payloadNode.getAttribute('contentType')
+            : '';
+
+    if (!contentType.toLowerCase().includes('application/json')) {
+        return {
+            usesJson: false
+        };
+    }
+
+    return {
+        usesJson: true,
+        severity: 'error'
+    };
 }
