@@ -28,3 +28,13 @@
         </Step>
     </Request>
 </Flow>
+
+
+console.log('Policies:', policies.length);
+
+policies.forEach(p =>
+    console.log(
+        p.getName ? p.getName() : p.name,
+        p.getType ? p.getType() : p.type
+    )
+);
