@@ -1,8 +1,16 @@
-const loadBalancerServerNode = getFirstNode(
-    '/ServiceCallout/HTTPTargetConnection/LoadBalancer/Server',
-    element
-);
+// ===== JSON transformation =====
 
-if (loadBalancerServerNode) {
-    trust = 'internal';
+if (policy.getType() === 'JSONToXML') {
+
+    const sourceNode = getFirstNode(
+        '/JSONToXML/Source',
+        policy.getElement()
+    );
+
+    // Default source = message
+    const source = sourceNode
+        ? getNodeText(sourceNode).trim()
+        : 'message';
+
+    return classifySource(source, registry);
 }
