@@ -1,59 +1,31 @@
-const trust = registry[baseVariable];
-
-if (trust) {
-
-    if (trust === 'internal') {
-
-
-if (trust === 'external') {
-
-
 /**
- * Builds a registry of variables produced by ServiceCallout policies.
+ * Determines whether a Step processes JSON content.
  *
- * The registry is used to determine the trust level of sources used by
- * ExtractVariables and JSONToXML policies.
+ * Supported policies:
+ * - ExtractVariables with JSONPayload
+ * - JSONToXML
+ * - AssignMessage with Payload contentType="application/json"
  *
- * Trust levels:
- * - internal: trusted source, ignored
- * - external: untrusted source, reported as error
- * - unknown : source cannot be verified automatically, reported as warning
- *
- * Detection rules:
- * - LocalTargetConnection => internal
- * - URL containing ".internal", ".local" or "localhost" => internal
- * - URL containing variables "{...}" => unknown
- * - Explicit external URL => external
- * - LoadBalancer/Server without resolvable URL => unknown
+ * For ExtractVariables and JSONToXML, the source is analyzed
+ * to determine whether it is trusted, untrusted, or unknown.
  *
  * @param {Object} endpoint Apigee endpoint object.
- *
- * @returns {Object<string, 'internal' | 'external' | 'unknown'>}
- * Registry indexed by variable name.
- */
-
-
-
-/**
- * Classifies the origin and severity of a JSON source.
- *
- * Rules:
- * - request/message sources => error
- * - response and Apigee internal variables => ignore
- * - ServiceCallout source from registry:
- *   - internal => ignore
- *   - external => error
- *   - unknown  => warning
- * - unknown custom source => warning
- *
- * @param {string} source Source value from ExtractVariables or JSONToXML.
+ * @param {Node} step XML Step node.
  * @param {Object<string, 'internal' | 'external' | 'unknown'>} registry
- * Registry returned by buildVariableRegistry().
+ * Variable trust registry built from ServiceCallout policies.
  *
  * @returns {{
  *   usesJson: boolean,
- *   severity: 'error' | 'warning' | 'ignore',
- *   source: string
+ *   severity?: 'error' | 'warning' | 'ignore',
+ *   source?: string
  * }}
- * Classification result.
+ * Analysis result.
  */
+
+
+// ===== JSONToXML =====
+
+
+// ===== AssignMessage =====
+// Detects JSON payload creation:
+// <Payload contentType="application/json">
