@@ -1,60 +1,59 @@
-/**
- * Validates the configuration of a JSONThreatProtection policy.
- *
- * Rules:
- * - ERROR if required protection fields are missing.
- * - WARNING if recommended protection fields are missing.
- *
- * Required fields:
- * - ContainerDepth
- *
- * Recommended fields:
- * - ArrayElementCount
- * - ObjectEntryCount
- * - StringValueLength
- *
- * @param {Object} policy ApigeeLint policy object.
- * @param {Function} policy.getElement Returns the XML DOM element.
- * @param {Function} policy.getName Returns the policy name.
- * @param {Function} policy.addMessage Adds a lint message.
- *
- * @returns {boolean}
- * Returns true when all required fields are present,
- * false otherwise.
- */
+const trust = registry[baseVariable];
 
+if (trust) {
+
+    if (trust === 'internal') {
+
+
+if (trust === 'external') {
 
 
 /**
  * Builds a registry of variables produced by ServiceCallout policies.
  *
- * The registry is later used to determine the trust level of
- * ExtractVariables and JSONToXML sources.
+ * The registry is used to determine the trust level of sources used by
+ * ExtractVariables and JSONToXML policies.
  *
  * Trust levels:
- * - internal : trusted source (ignored)
- * - external : untrusted source (error)
- * - unknown  : source cannot be determined automatically (warning)
+ * - internal: trusted source, ignored
+ * - external: untrusted source, reported as error
+ * - unknown : source cannot be verified automatically, reported as warning
  *
  * Detection rules:
  * - LocalTargetConnection => internal
- * - URL containing .internal, .local or localhost => internal
- * - URL containing variables ({...}) => unknown
- * - Hardcoded external URL => external
+ * - URL containing ".internal", ".local" or "localhost" => internal
+ * - URL containing variables "{...}" => unknown
+ * - Explicit external URL => external
+ * - LoadBalancer/Server without resolvable URL => unknown
  *
  * @param {Object} endpoint Apigee endpoint object.
  *
- * @returns {Object<string, {
- *   type: string,
- *   trust: 'internal' | 'external' | 'unknown'
- * }>}
+ * @returns {Object<string, 'internal' | 'external' | 'unknown'>}
  * Registry indexed by variable name.
  */
 
 
 
-// ===== Determine ServiceCallout trust level =====
-
-
-
-// Explicit external URL
+/**
+ * Classifies the origin and severity of a JSON source.
+ *
+ * Rules:
+ * - request/message sources => error
+ * - response and Apigee internal variables => ignore
+ * - ServiceCallout source from registry:
+ *   - internal => ignore
+ *   - external => error
+ *   - unknown  => warning
+ * - unknown custom source => warning
+ *
+ * @param {string} source Source value from ExtractVariables or JSONToXML.
+ * @param {Object<string, 'internal' | 'external' | 'unknown'>} registry
+ * Registry returned by buildVariableRegistry().
+ *
+ * @returns {{
+ *   usesJson: boolean,
+ *   severity: 'error' | 'warning' | 'ignore',
+ *   source: string
+ * }}
+ * Classification result.
+ */
