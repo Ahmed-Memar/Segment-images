@@ -1,31 +1,29 @@
 /**
- * Determines whether a Step processes JSON content.
+ * Main plugin entry point executed for each ProxyEndpoint.
  *
- * Supported policies:
- * - ExtractVariables with JSONPayload
- * - JSONToXML
- * - AssignMessage with Payload contentType="application/json"
+ * Validation process:
+ * 1. Build a registry of ServiceCallout response variables.
+ * 2. Check whether a valid JSONThreatProtection policy exists in PreFlow.
+ * 3. If not, analyze JSON usage in PreFlow.
+ * 4. Analyze each Flow independently.
+ * 5. Report errors and warnings.
  *
- * For ExtractVariables and JSONToXML, the source is analyzed
- * to determine whether it is trusted, untrusted, or unknown.
+ * @param {Object} endpoint Apigee ProxyEndpoint object.
+ * @param {Function} cb Callback function.
  *
- * @param {Object} endpoint Apigee endpoint object.
- * @param {Node} step XML Step node.
- * @param {Object<string, 'internal' | 'external' | 'unknown'>} registry
- * Variable trust registry built from ServiceCallout policies.
- *
- * @returns {{
- *   usesJson: boolean,
- *   severity?: 'error' | 'warning' | 'ignore',
- *   source?: string
- * }}
- * Analysis result.
+ * @returns {void}
  */
 
+// ServiceCallout response variable trust registry
+const variableRegistry = buildVariableRegistry(endpoint);
 
-// ===== JSONToXML =====
+
+// A JSONThreatProtection policy in PreFlow protects all Flows
 
 
-// ===== AssignMessage =====
-// Detects JSON payload creation:
-// <Payload contentType="application/json">
+// ===== FLOW-BY-FLOW VALIDATION =====
+
+
+// Separate errors from warnings
+
+flowResults
