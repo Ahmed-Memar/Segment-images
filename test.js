@@ -1,29 +1,20 @@
-/**
- * Main plugin entry point executed for each ProxyEndpoint.
- *
- * Validation process:
- * 1. Build a registry of ServiceCallout response variables.
- * 2. Check whether a valid JSONThreatProtection policy exists in PreFlow.
- * 3. If not, analyze JSON usage in PreFlow.
- * 4. Analyze each Flow independently.
- * 5. Report errors and warnings.
- *
- * @param {Object} endpoint Apigee ProxyEndpoint object.
- * @param {Function} cb Callback function.
- *
- * @returns {void}
- */
+// ===== XML transformation policies =====
 
-// ServiceCallout response variable trust registry
-const variableRegistry = buildVariableRegistry(endpoint);
+if (['XMLToJSON', 'XSL'].includes(policy.getType())) {
 
+    const sourcePath =
+        policy.getType() === 'XMLToJSON'
+            ? '/XMLToJSON/Source'
+            : '/XSL/Source';
 
-// A JSONThreatProtection policy in PreFlow protects all Flows
+    const sourceNode = getFirstNode(
+        sourcePath,
+        policy.getElement()
+    );
 
+    const source = sourceNode
+        ? getNodeText(sourceNode).trim()
+        : 'message';
 
-// ===== FLOW-BY-FLOW VALIDATION =====
-
-
-// Separate errors from warnings
-
-flowResults
+    return classifySource(source, registry);
+}
