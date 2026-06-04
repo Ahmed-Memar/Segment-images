@@ -107,6 +107,14 @@ Apigee policy reference: `XMLThreatProtection`
 
 ---
 
+### Source Classification
+
+Both controls use the same source classification logic when analyzing XML or JSON processing policies.
+
+The objective is to determine whether the processed payload originates from a trusted internal source, an untrusted external source, or a source whose origin cannot be determined automatically. This classification allows the lint rule to decide whether a missing ThreatProtection policy should raise an ERROR, a WARNING, or be ignored.
+
+---
+
 ## Design Decisions
 
 1. The control evaluates request flows only.
