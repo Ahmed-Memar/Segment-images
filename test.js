@@ -1,20 +1,24 @@
-// ===== XML transformation policies =====
+const stepHasJSON = (endpoint, step) =>
+    stepUsesJSON(endpoint, step, {}).usesJson === true;
 
-if (['XMLToJSON', 'XSL'].includes(policy.getType())) {
+const stepHasXML = (endpoint, step) =>
+    stepUsesXML(endpoint, step, {}).usesXML === true;
 
-    const sourcePath =
-        policy.getType() === 'XMLToJSON'
-            ? '/XMLToJSON/Source'
-            : '/XSL/Source';
 
-    const sourceNode = getFirstNode(
-        sourcePath,
-        policy.getElement()
-    );
 
-    const source = sourceNode
-        ? getNodeText(sourceNode).trim()
-        : 'message';
+if (stepHasJSON(endpoint, step)) {
+    preFlowHasJSON = true;
+}
 
-    return classifySource(source, registry);
+if (stepHasXML(endpoint, step)) {
+    preFlowHasXML = true;
+}
+
+
+if (stepHasJSON(endpoint, step)) {
+    hasJSON = true;
+}
+
+if (stepHasXML(endpoint, step)) {
+    hasXML = true;
 }
