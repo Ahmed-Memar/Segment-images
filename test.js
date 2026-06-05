@@ -1,40 +1,15 @@
 /**
- * Returns true if the Step uses JSON processing.
+ * Returns true if the Step uses XML processing that requires XMLThreatProtection.
  *
  * @param {Object} endpoint
  * @param {Node} step
+ * @param {Object<string, string>} registry
  *
  * @returns {boolean}
  */
-const stepHasJSON = (endpoint, step) =>
-    stepUsesJSON(endpoint, step, {}).usesJson === true;
+const stepRequiresXMLProtection = function (endpoint, step, registry) {
+    const analysis = stepUsesXML(endpoint, step, registry);
 
-/**
- * Returns true if the Step uses XML processing.
- *
- * @param {Object} endpoint
- * @param {Node} step
- *
- * @returns {boolean}
- */
-const stepHasXML = (endpoint, step) =>
-    stepUsesXML(endpoint, step, {}).usesXML === true;
-
-
-
-if (stepHasJSON(endpoint, step)) {
-    preFlowHasJSON = true;
-}
-
-if (stepHasXML(endpoint, step)) {
-    preFlowHasXML = true;
-}
-
-
-if (stepHasJSON(endpoint, step)) {
-    hasJSON = true;
-}
-
-if (stepHasXML(endpoint, step)) {
-    hasXML = true;
-}
+    return analysis.usesXML === true &&
+        analysis.severity !== 'ignore';
+};
