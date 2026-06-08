@@ -1,42 +1,21 @@
-// ===== PRE-FLOW JSON DETECTION =====
-
-const preFlowJsonSteps = preFlowSteps
-    .map(step => ({
-        stepName: getStepName(step),
-        line: step.lineNumber,
-        column: step.columnNumber,
-        analysis: stepUsesJSON(
-            endpoint,
-            step,
-            variableRegistry
-        )
-    }))
-    .filter(r =>
-        r.analysis.usesJson &&
-        r.analysis.severity !== 'ignore'
-    );
-
-if (preFlowJsonSteps.length > 0) {
-
-    hasIssue = true;
-
-    preFlowJsonSteps.forEach(r => {
-
-        const usedPlugin =
-            r.analysis.severity === 'warning'
-                ? warningPlugin
-                : plugin;
-
-        endpoint.addMessage({
-            plugin: usedPlugin,
-            line: r.line,
-            column: r.column,
-            message:
-                r.analysis.severity === 'warning'
-                    ? `PreFlow may require manual review: Step "${r.stepName}" uses JSON from source "${r.analysis.source}"; unable to determine automatically whether JSONThreatProtection is required`
-                    : `PreFlow is not compliant: Step "${r.stepName}" uses JSON but no JSONThreatProtection policy is applied`
-        });
-
-    });
-
-}
+/**
+ * Main plugin entry point executed for each ProxyEndpoint.
+ *
+ * Validation process:
+ * 1. Build a registry of ServiceCallout response variables.
+ * 2. Check whether a valid JSONThreatProtection policy exists in PreFlow.
+ * 3. If a valid policy exists in PreFlow, consider the proxy globally protected.
+ * 4. Otherwise, analyze JSON usage in PreFlow using explicit JSON indicators.
+ * 5. Validate request flows using a default JSON assumption:
+ *    - POST, PUT and PATCH flows are assumed to process JSON request bodies.
+ *    - Flows that clearly process XML are ignored and handled by
+ *      XMLThreatProtection validation.
+ * 6. Verify that a JSONThreatProtection policy is present and correctly
+ *    configured wherever required.
+ * 7. Report validation errors and warnings.
+ *
+ * @param {Object} endpoint Apigee ProxyEndpoint object.
+ * @param {Function} cb Callback function.
+ *
+ * @returns {void}
+ */
