@@ -1,11 +1,13 @@
 # Source Classification
 
-Source classification is used for:
+Source classification is used when analyzing the `<Source>` parameter of JSON and XML processing policies.
+
+It determines whether the payload source is trusted, untrusted, or unknown.
+
+It is used for:
 
 - JSON processing detected through explicit indicators in PreFlow.
 - XML processing detected in PreFlow and request flows.
-
-It determines whether the payload source is trusted, untrusted, or unknown.
 
 It is not used for the default JSON detection applied to POST, PUT and PATCH request flows.
 
