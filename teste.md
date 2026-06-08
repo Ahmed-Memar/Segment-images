@@ -1,89 +1,172 @@
-JSONThreatProtection
+# Injection Attacks Prevention
 
-Detection Logic
+## Description
 
-The rule applies JSONThreatProtection using two mechanisms:
+APIs processing XML or JSON payloads must implement ThreatProtection policies to prevent malicious or excessively complex payloads.
 
-1. PreFlow detection
-In PreFlow, JSON is detected only through explicit JSON indicators:
-Table: JSON indicators table
+## Evaluation
 
-2. Flow-by-flow detection
-For normal request flows, POST, PUT and PATCH flows are assumed to process JSON request bodies by default, unless a clear XML indicator is detected.
-If no JSONThreatProtection policy is applied in the same flow, an ERROR is raised.
+The API proxy must apply appropriate ThreatProtection policies and configure the required protection parameters when processing XML or JSON payloads.
 
-Configuration Requirements
+---
 
-Table: JSONThreatProtection configuration requirements table
+# JSONThreatProtection
 
-XMLThreatProtection
+## Purpose
 
-Detection Logic
+Protect APIs against malicious or excessively complex JSON payloads by enforcing structure and value validation controls.
 
-The rule detects XML processing only through explicit XML indicators:
-Table: XML indicators table
+## Detection Logic
 
-If XML processing is detected, the rule checks whether XMLThreatProtection is applied in the same flow, or globally in PreFlow.
+The rule determines whether JSONThreatProtection is required using the following logic.
 
-Configuration Requirements
+### PreFlow
 
-Table: XMLThreatProtection configuration requirements table
+A JSONThreatProtection policy configured in the request PreFlow is considered a global protection for the entire ProxyEndpoint.
 
-Source Classification
+If no JSONThreatProtection policy exists in the request PreFlow, the rule analyzes PreFlow request steps using explicit JSON processing indicators.
 
-Source classification is used only when the rule analyzes explicit processing policies that define a <Source> element, such as ExtractVariables, JSONToXML, XMLToJSON or XSL.
+**Table: JSON processing indicators**
 
-It is not used for JSON default detection on POST, PUT and PATCH flows, because in that case the rule assumes a JSON request body by default.
+### Request Flows
 
-Table: Source classification table
+For request flows:
 
-Design Decisions
+- POST flows are assumed to process JSON request bodies by default.
+- PUT flows are assumed to process JSON request bodies by default.
+- PATCH flows are assumed to process JSON request bodies by default.
+- Flows that clearly process XML are excluded and handled by XMLThreatProtection.
 
-JSONThreatProtection
+If no JSONThreatProtection policy is applied in the same flow, a violation is reported.
+
+## Configuration Requirements
+
+The policy must be configured according to the following security rules:
+
+**Table: JSONThreatProtection configuration requirements**
+
+## Design Decisions
 
 1. A valid JSONThreatProtection policy in request PreFlow is treated as global protection.
-2. In PreFlow, JSON must be detected through explicit JSON indicators.
-3. In normal request flows, POST, PUT and PATCH are assumed to process JSON request bodies by default.
-4. Flows that clearly process XML are ignored by JSONThreatProtection and handled by XMLThreatProtection.
-5. This conservative approach reduces false negatives, but may increase false positives.
+2. PreFlow analysis relies on explicit JSON processing indicators.
+3. POST, PUT and PATCH request flows are assumed to process JSON request bodies by default.
+4. Flows clearly processing XML are ignored by this control.
+5. The approach intentionally favors security by minimizing false negatives.
 
-XMLThreatProtection
-
-1. A valid XMLThreatProtection policy in request PreFlow is treated as global protection.
-2. XMLThreatProtection is required only when explicit XML indicators are detected.
-3. HTTP method conditions are not required for XML detection, because XML processing is already explicitly identified.
-4. Source classification is used when XML processing policies define a <Source>.
-
-Rule Logic
-
-JSONThreatProtection
+## Rule Logic
 
 1. Check whether JSONThreatProtection exists in request PreFlow.
-2. If yes, validate its configuration.
-3. If valid, treat it as global protection and stop the analysis.
-4. If no global protection exists, analyze PreFlow using explicit JSON indicators.
-5. Then analyze each request flow:
-   i. Ignore flows that are not POST, PUT or PATCH.
-   ii. Ignore flows that clearly process XML.
-   iii. Otherwise, assume JSON request body by default.
-6. Check whether JSONThreatProtection exists in the same flow.
-7. Report:
-   i. ERROR if JSONThreatProtection is missing.
-   ii. ERROR if required configuration parameters are missing.
-   iii. WARNING if recommended configuration parameters are missing.
+2. Validate its configuration.
+3. If valid, treat it as global protection and stop further analysis.
+4. Otherwise, analyze PreFlow using JSON processing indicators.
+5. Analyze each request flow.
+6. Ignore flows that clearly process XML.
+7. Consider POST, PUT and PATCH flows as JSON-processing flows.
+8. Verify that JSONThreatProtection exists in the same flow.
+9. Report configuration or protection violations.
 
-XMLThreatProtection
+## References
+
+Lint Rule: `EX-CS002-CheckJSONThreatProtection.js`
+
+Apigee policy reference: `JSONThreatProtection`
+
+---
+
+# XMLThreatProtection
+
+## Purpose
+
+Protect APIs against malicious or excessively complex XML payloads by enforcing structure and value validation controls.
+
+## Detection Logic
+
+The rule detects XML processing using explicit XML processing indicators.
+
+### PreFlow
+
+A valid XMLThreatProtection policy configured in request PreFlow is considered global protection.
+
+If no XMLThreatProtection policy exists in request PreFlow, the rule analyzes PreFlow request steps using XML processing indicators.
+
+**Table: XML processing indicators**
+
+### Request Flows
+
+The rule analyzes request flows and detects explicit XML processing indicators.
+
+If XML processing is detected, XMLThreatProtection must be applied in the same flow.
+
+## Configuration Requirements
+
+The policy must be configured according to the following security rules:
+
+**Table: XMLThreatProtection configuration requirements**
+
+## Design Decisions
+
+1. A valid XMLThreatProtection policy in request PreFlow is treated as global protection.
+2. XML processing must be detected through explicit indicators.
+3. HTTP methods are not used for XML detection.
+4. Source classification is used when XML processing policies define a `<Source>`.
+
+## Rule Logic
 
 1. Build a registry of ServiceCallout response variables.
 2. Check whether XMLThreatProtection exists in request PreFlow.
-3. If yes, validate its configuration.
-4. If valid, treat it as global protection and stop the analysis.
-5. If no global protection exists, analyze PreFlow and request flows using explicit XML indicators.
-6. Check whether XMLThreatProtection exists in the same flow.
-7. Report:
-   i. ERROR if XMLThreatProtection is missing for a high-risk XML source.
-   ii. WARNING if the XML source origin cannot be verified automatically.
-   iii. WARNING if recommended configuration parameters are missing.
-   iv. IGNORE for trusted internal or backend sources.
+3. Validate its configuration.
+4. If valid, treat it as global protection and stop further analysis.
+5. Otherwise, analyze PreFlow and request flows using XML processing indicators.
+6. Verify that XMLThreatProtection exists in the same flow.
+7. Report configuration or protection violations.
 
-Important : la phrase actuelle “Both controls use the same source classification logic” n’est plus totalement vraie. Remplace-la par la section “Source Classification” ci-dessus.
+## References
+
+Lint Rule: `EX-CS003-CheckXMLThreatProtection.js`
+
+Apigee policy reference: `XMLThreatProtection`
+
+---
+
+# Source Classification
+
+Both controls use the same source-classification mechanism when analyzing policies that define a `<Source>` element.
+
+The objective is to determine whether the processed payload originates from:
+
+- a trusted internal source,
+- an untrusted external source,
+- or an unknown source that cannot be classified automatically.
+
+Source classification is used only when an explicit processing policy provides a `<Source>` element.
+
+It is not used for the default JSON detection applied to POST, PUT and PATCH request flows.
+
+**Table: Source classification**
+
+---
+
+# Source Classification Rules
+
+**Table: Source classification rules**
+
+---
+
+# Design Decisions Summary
+
+1. Request flows only are evaluated.
+2. A valid ThreatProtection policy in request PreFlow is treated as global protection.
+3. Explicit XML and JSON indicators are used whenever possible.
+4. JSON request bodies are assumed by default for POST, PUT and PATCH request flows.
+5. XML detection relies only on explicit XML indicators.
+6. ServiceCallout response variables are indexed before flow analysis.
+7. Unknown sources are reported as WARNING because their trust level cannot be determined automatically.
+
+---
+
+# References
+
+- Lint Rule: `EX-CS002-CheckJSONThreatProtection.js`
+- Lint Rule: `EX-CS003-CheckXMLThreatProtection.js`
+- Apigee Policy: `JSONThreatProtection`
+- Apigee Policy: `XMLThreatProtection`
