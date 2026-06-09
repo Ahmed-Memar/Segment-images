@@ -1,3 +1,13 @@
+# DDOS prevention
+
+## Description
+
+APIs must implement rate-limiting controls to protect against denial-of-service (DoS) and distributed denial-of-service (DDoS) attacks caused by excessive request volumes.
+
+## Evaluation
+
+The API proxy must apply appropriate rate-limiting policies and configure the required parameters to control incoming request rates and mitigate traffic spikes.
+
 ## SpikeArrest
 
 ### Purpose
