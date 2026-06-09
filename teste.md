@@ -1,26 +1,46 @@
-# Rule Logic
+## SpikeArrest
 
-1. Build a registry of ServiceCallout response variables.
+### Purpose
 
-2. Classify ServiceCallout response variables as internal, external or unknown.
+Protect APIs against traffic spikes and basic denial-of-service attempts by limiting the rate of incoming requests.
 
-3. Check whether a valid ThreatProtection policy exists in the request PreFlow.
-   - If valid, treat it as global protection and stop further analysis.
-   - Otherwise, continue flow analysis.
+### Detection Logic
 
-4. Detect payload processing:
-   - JSONThreatProtection:
-     - PreFlow uses explicit JSON processing indicators.
-     - POST, PUT and PATCH request flows are assumed to process JSON request bodies by default.
-     - Flows that clearly process XML are excluded.
-   - XMLThreatProtection:
-     - PreFlow and request flows use explicit XML processing indicators.
+The rule verifies that a SpikeArrest policy is applied to the API proxy.
 
-5. Verify that the corresponding ThreatProtection policy exists where required.
+A SpikeArrest policy is considered present when it is applied in:
 
-6. Validate the policy configuration.
+- The request PreFlow, or
+- Any request Flow.
 
-7. Report findings according to source classification and configuration requirements:
-   - ERROR for high-risk sources or missing mandatory protection parameters.
-   - WARNING for unknown sources or missing recommended protection parameters.
-   - IGNORE for trusted internal sources.
+### Configuration Requirements
+
+The policy must be configured according to the following security rules:
+
+| Parameter | Description | Severity | Why |
+|------------|------------|------------|------------|
+| Rate | Defines the maximum number of requests allowed during a given time interval. | ERROR | Without a rate limit, the policy cannot effectively protect the API against traffic spikes or excessive request volumes. |
+
+### Design Decisions
+
+- A SpikeArrest policy applied in the request PreFlow is treated as global protection.
+- If no compliant SpikeArrest policy exists in the request PreFlow, request flows are evaluated individually.
+- A SpikeArrest policy is considered compliant only when the required `Rate` element is present.
+
+### Rule Logic
+
+1. Check whether at least one SpikeArrest policy exists in the proxy bundle.
+2. Validate the configuration of every SpikeArrest policy:
+   - The policy must contain a `Rate` element.
+3. Check whether a compliant SpikeArrest policy is applied:
+   - In the request PreFlow, or
+   - In every request Flow.
+4. Report an ERROR when:
+   - No SpikeArrest policy is applied where required.
+   - A SpikeArrest policy is missing the required `Rate` element.
+
+### References
+
+Lint Rule: `EX-CS004-CheckSpikeArrest.js`
+
+Apigee policy reference: `SpikeArrest`
