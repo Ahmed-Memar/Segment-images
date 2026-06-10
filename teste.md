@@ -1,1 +1,1 @@
-h
+J'ai eu le retour de Lilian. Pour lui, Quota est un autre use case : il sert surtout à limiter le nombre d'appels d'un clientId vers un proxy Apigee. Il ne considère pas Quota comme un mécanisme de protection DDOS équivalent à SpikeArrest. Je vais donc conserver la règle telle quelle avec SpikeArrest uniquement pour DDOS Prevention.
