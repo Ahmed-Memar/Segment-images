@@ -1,8 +1,9 @@
-1. Check whether a SpikeArrest policy exists in the proxy bundle.
-2. Validate that every SpikeArrest policy contains a Rate element.
-3. Check whether a compliant SpikeArrest policy is applied:
-   - In the request PreFlow, or
-   - In every request Flow.
-4. Report an ERROR when:
-   - No compliant SpikeArrest policy is applied where required.
-   - A SpikeArrest policy is missing the required Rate element.
+Salut Lilian,
+
+J'ai une question concernant la règle DDOS Prevention sur laquelle je travaille actuellement.Lors d'une réunion avec l'équipe Apigee, mon tuteur a retenu que Quota pouvait également être utilisé dans certains cas pour ce besoin. En regardant ensuite la documentation Apigee, on a plutôt eu l'impression que SpikeArrest et Quota répondent à des usages un peu différents.
+
+Pour l'instant, on aurait plutôt tendance à penser que Quota ne remplace pas SpikeArrest pour ce contrôle, mais on préfère vérifier pour être sûrs d'avoir bien compris.Dans quels cas utilisez-vous Quota plutôt que SpikeArrest ?
+
+Et est-ce qu'une API qui utilise uniquement Quota (sans SpikeArrest) est considérée comme répondant au besoin de throttling / DDOS prevention, ou bien est-ce un autre cas d'usage ?
+
+Merci 
