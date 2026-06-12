@@ -1,1 +1,3 @@
-console.log('INDEX', index, analysis);
+} catch (e) {
+    console.error('ERROR IN', policy.getName(), e);
+}
