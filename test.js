@@ -1,13 +1,2 @@
-const verifyJwtAnalyses = getPoliciesByType(endpoint, 'VerifyJWT')
-    .map(policy => {
-        const result = analyzeVerifyJwtPolicy(policy);
-
-        console.log(
-            'policy:',
-            policy.getName(),
-            'result:',
-            result
-        );
-
-        return result;
-    });
+console.log('algorithmValue=', algorithmValue);
+console.log('algorithmInfo=', algorithmInfo);
