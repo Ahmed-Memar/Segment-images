@@ -1,7 +1,13 @@
-console.log('policy=', policyName);
-console.log('returning=', {
-    policy,
-    isValid: errors.length === 0
-});
+const verifyJwtAnalyses = getPoliciesByType(endpoint, 'VerifyJWT')
+    .map(policy => {
+        const result = analyzeVerifyJwtPolicy(policy);
 
+        console.log(
+            'policy:',
+            policy.getName(),
+            'result:',
+            result
+        );
 
+        return result;
+    });
