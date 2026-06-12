@@ -1,13 +1,9 @@
-/**
- * Classify one or more JWT algorithms.
- *
- * @param {string} algorithms Comma-separated algorithm list.
- * @returns {{
- *   values: string[],
- *   results: {
- *     status: string,
- *     family: string|null,
- *     value: string
- *   }[]
- * }}
- */
+// HS* requires <SecretKey>, while RS*/PS*/ES* require <PublicKey>.
+// Mixing both families would require incompatible key types.
+if (usesHS && usesAsymmetric) {
+    errors.push({
+        line: getNodeLine(algorithmNode, policyLine),
+        column: getNodeColumn(algorithmNode, policyColumn),
+        message: `VerifyJWT policy "${policyName}" mixes symmetric (HS*) and asymmetric (RS*/PS*/ES*) algorithms, which is not supported.`
+    });
+}
