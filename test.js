@@ -1,9 +1,14 @@
-const audienceNode = getFirstNode('/VerifyJWT/Audience', el);
-const audienceValue =
-  getNodeText(audienceNode) ||
-  (audienceNode && audienceNode.getAttribute('ref'));
+const isOptionsFlow = flow => {
+    const condition = getCondition(flow);
 
-const issuerNode = getFirstNode('/VerifyJWT/Issuer', el);
-const issuerValue =
-  getNodeText(issuerNode) ||
-  (issuerNode && issuerNode.getAttribute('ref'));
+    const hasOptionsVerb =
+        /request\.verb\s*(?:=|==)\s*["']?OPTIONS["']?/i.test(condition);
+
+    const hasOriginHeader =
+        /request\.header\.origin\s*(?:!=|NotEquals|IsNot)\s*(?:"?null"?)/i.test(condition);
+
+    const hasAccessControlRequestMethod =
+        /request\.header\.Access-Control-Request-Method\s*(?:!=|NotEquals|IsNot)\s*(?:"?null"?)/i.test(condition);
+
+    return hasOptionsVerb && hasOriginHeader && hasAccessControlRequestMethod;
+};
