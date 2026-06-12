@@ -1,3 +1,11 @@
-} catch (e) {
-    console.error('ERROR IN', policy.getName(), e);
-}
+console.log(
+  policyName,
+  'algorithmValue =',
+  algorithmValue
+);
+
+console.log(
+  policyName,
+  'algorithmInfo =',
+  algorithmInfo
+);
