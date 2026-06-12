@@ -2,7 +2,7 @@
  * Classify one or more JWT algorithms.
  *
  * @param {string} algorithms
- * @returns {object}
+ * @returns {{values:string[], results:object[], hasError:boolean, hasWarning:boolean}}
  */
 const classifyJwtAlgorithms = algorithms => {
     const values = (algorithms || '')
