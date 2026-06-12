@@ -1,2 +1,3 @@
-console.log('algorithmValue=', algorithmValue);
-console.log('algorithmInfo=', algorithmInfo);
+console.log('algorithmNode=', algorithmNode);
+console.log('policyLine=', policyLine);
+console.log('policyColumn=', policyColumn);
