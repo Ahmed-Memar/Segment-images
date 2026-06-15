@@ -1,12 +1,14 @@
-const verifyJwtAnalyses = getPoliciesByType(endpoint, 'VerifyJWT')
-  .map(policy => {
-    const result = analyzeVerifyJwtPolicy(policy);
+if (!algorithmValue) {
+  console.log('NO ALGORITHM =>', policyName);
 
-    console.log(
-      'MAP RESULT =>',
-      policy.getName(),
-      result === undefined ? 'UNDEFINED' : 'OK'
-    );
-
-    return result;
+  errors.push({
+    line: policyLine,
+    column: policyColumn,
+    message: `VerifyJWT policy "${policyName}" must define <Algorithm>.`
   });
+
+  console.log('AFTER PUSH =>', policyName);
+}
+else {
+   ...
+}
