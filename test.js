@@ -1,11 +1,12 @@
-console.log(
-  policyName,
-  'algorithmValue =',
-  algorithmValue
-);
+const verifyJwtAnalyses = getPoliciesByType(endpoint, 'VerifyJWT')
+  .map(policy => {
+    const result = analyzeVerifyJwtPolicy(policy);
 
-console.log(
-  policyName,
-  'algorithmInfo =',
-  algorithmInfo
-);
+    console.log(
+      'MAP RESULT =>',
+      policy.getName(),
+      result === undefined ? 'UNDEFINED' : 'OK'
+    );
+
+    return result;
+  });
