@@ -1,9 +1,9 @@
-Tu peux lui écrire naturellement :
+Tu peux lui écrire simplement :
 
-> J'ai vérifié la documentation Apigee. Oui, les TargetEndpoints peuvent également renvoyer des erreurs à l'utilisateur via leurs FaultRules ou leur DefaultFaultRule.
+> J'ai regardé la documentation Apigee. Apparemment, les TargetEndpoints peuvent aussi gérer des erreurs qui seront renvoyées au client via leurs FaultRules ou leur DefaultFaultRule.
 
-La différence principale est que les FaultRules du ProxyEndpoint gèrent les erreurs côté proxy (VerifyJWT, OAuthV2, SpikeArrest, RaiseFault, etc.), tandis que les FaultRules du TargetEndpoint gèrent plutôt les erreurs liées à l'appel du backend (timeout, backend indisponible, erreur SSL, problème de connexion, etc.).
+La différence que j'ai comprise, c'est que les FaultRules du ProxyEndpoint gèrent les erreurs côté proxy (VerifyJWT, OAuthV2, SpikeArrest, RaiseFault, etc.), alors que les FaultRules du TargetEndpoint gèrent plutôt les erreurs liées à l'appel du backend (timeout, backend indisponible, problème SSL, problème de connexion, etc.).
 
-Par contre, en regardant les 4 bundles que j'ai à disposition, je constate que 3 n'ont aucun FaultRule ni DefaultFaultRule dans leurs TargetEndpoints. Le quatrième contient bien un bloc <FaultRules>, mais il est vide.
+Par contre, en regardant les 4 bundles que j'ai, je vois que 3 n'ont aucun FaultRule ni DefaultFaultRule dans le TargetEndpoint. Et le 4ème a bien un bloc FaultRules, mais il est vide.
 
-Du coup, je me demande si, dans notre contexte, la gestion des erreurs est généralement centralisée au niveau des ProxyEndpoints et si cela vaut vraiment le coup d'inclure les TargetEndpoints dans le contrôle V1. Qu'en penses-tu ?
+Du coup, je me demande si, dans la pratique chez BNP, la gestion des erreurs n'est pas principalement faite dans les ProxyEndpoints. Tu en penses quoi ?
