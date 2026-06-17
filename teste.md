@@ -1,46 +1,35 @@
 # Exception & Error Management
 
-## Description
+## Applicable Error Handling Mechanisms
 
-APIs must implement exception and error handling mechanisms to ensure that unexpected errors are managed consistently and do not expose internal implementation details, backend information, or sensitive technical data to consumers.
-
-## Evaluation
-
-The API proxy must define an exception and error management mechanism using Apigee FaultRules or DefaultFaultRule at the ProxyEndpoint level.
-
-## Applicable Configuration
-
-| Configuration | API Type |
-|---|---|
+| Mechanism | API Type |
+|-----------|----------|
 | FaultRules / DefaultFaultRule | All APIs |
 
 ---
 
-# Configuration Implementation
+# Implementation
 
 ## Design Decisions
 
-- Error handling must be explicitly configured.
-- Empty FaultRules are not considered valid.
-- Either a DefaultFaultRule or a valid FaultRule is sufficient.
-- Only the presence of an error handling mechanism is verified.
+The plugin evaluates the ProxyEndpoint and verifies that an error handling mechanism is explicitly defined. Compliance is achieved when a DefaultFaultRule exists or when at least one FaultRule contains configuration elements. The plugin validates the presence of an error handling mechanism but does not analyze the internal logic of the configured rules.
 
 ## Rule Logic
 
-The plugin evaluates the ProxyEndpoint as follows:
+The plugin evaluates the **ProxyEndpoint** as follows:
 
 ### 1. Error Handling Detection
 
 The ProxyEndpoint must define at least one of the following:
 
-- A DefaultFaultRule
-- A FaultRule containing at least one child element
+- A `DefaultFaultRule`
+- A `FaultRule` containing at least one configuration element
 
 ### 2. Compliance Validation
 
-The ProxyEndpoint is considered compliant when one of the following conditions is met:
+The ProxyEndpoint is considered compliant when one of the following conditions is met.
 
-#### Option A – DefaultFaultRule
+#### Example 1 – DefaultFaultRule
 
 ```xml
 <DefaultFaultRule name="default-faultrule">
@@ -51,7 +40,7 @@ The ProxyEndpoint is considered compliant when one of the following conditions i
 </DefaultFaultRule>
 ```
 
-#### Option B – FaultRule
+#### Example 2 – FaultRule
 
 ```xml
 <FaultRules>
@@ -63,13 +52,15 @@ The ProxyEndpoint is considered compliant when one of the following conditions i
 </FaultRules>
 ```
 
+These are only examples. Any DefaultFaultRule or FaultRule configuration is accepted as long as it contains at least one configuration element.
+
 ### 3. Non-Compliant Configurations
 
 The following configurations are considered non-compliant:
 
-- No FaultRule and no DefaultFaultRule defined.
-- Empty FaultRules block (`<FaultRules/>`).
-- Empty FaultRule definition without any child configuration element.
+- No `FaultRules` and no `DefaultFaultRule` defined.
+- An empty `FaultRules` block (`<FaultRules/>`).
+- A `FaultRule` without any configuration element.
 
 ---
 
@@ -77,4 +68,4 @@ The following configurations are considered non-compliant:
 
 **Lint Rule:** EX-CS010-CheckExceptionErrorManagement.js
 
-**Apigee configuration reference:** FaultRules & DefaultFaultRule
+**Apigee Reference:** FaultRules & DefaultFaultRule
