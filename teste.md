@@ -8,15 +8,15 @@ APIs must implement exception and error handling mechanisms to ensure that unexp
 
 The API proxy must define an exception and error management mechanism using Apigee FaultRules or DefaultFaultRule at the ProxyEndpoint level.
 
-## Applicable Policies
+## Applicable Configuration
 
-| Policy | API Type |
-|----------|----------|
+| Configuration | API Type |
+|---|---|
 | FaultRules / DefaultFaultRule | All APIs |
 
 ---
 
-# Policy Implementation
+# Configuration Implementation
 
 ## Design Decisions
 
@@ -24,7 +24,7 @@ The current implementation evaluates only the **ProxyEndpoint**.
 
 TargetEndpoint error handling is not currently enforced and may be evaluated separately depending on BNP security requirements.
 
-A FaultRule is considered valid if it contains at least one configuration element.
+A FaultRule is considered valid only if it contains at least one child configuration element.
 
 ## Rule Logic
 
@@ -85,4 +85,4 @@ The following configurations are considered non-compliant:
 
 **Lint Rule:** EX-CS010-CheckExceptionErrorManagement.js
 
-**Apigee policy reference:** FaultRules & DefaultFaultRule
+**Apigee configuration reference:** FaultRules & DefaultFaultRule
