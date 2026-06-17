@@ -1,6 +1,7 @@
-## Applicable Error Handling Mechanisms
+Design Decisions
 
-| Mechanism | Purpose |
-|-----------|----------|
-| FaultRule | Handle specific error scenarios based on defined fault conditions and execute dedicated error-handling actions. |
-| DefaultFaultRule | Provide a default error-handling mechanism when no FaultRule matches the generated fault. |
+• The validation is limited to the ProxyEndpoint. TargetEndpoint error handling is not currently evaluated.
+• The plugin verifies the presence of an error-handling mechanism but does not validate the internal behavior of FaultRules or DefaultFaultRule.
+
+
+An empty FaultRule.
