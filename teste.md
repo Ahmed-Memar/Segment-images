@@ -20,12 +20,10 @@ The API proxy must define an exception and error management mechanism using Apig
 
 ## Design Decisions
 
-- The current implementation evaluates only the ProxyEndpoint.
-- TargetEndpoint error handling is not currently enforced and may be evaluated separately depending on BNP security requirements.
 - Error handling must be explicitly configured.
-- Empty FaultRule definitions are ignored because they do not provide any error management behavior.
-- The presence of either a valid FaultRule or a DefaultFaultRule is considered sufficient.
-- The plugin focuses on the existence of an error management mechanism and does not validate the internal implementation of the FaultRule or DefaultFaultRule.
+- Empty FaultRules are not considered valid.
+- Either a DefaultFaultRule or a valid FaultRule is sufficient.
+- Only the presence of an error handling mechanism is verified.
 
 ## Rule Logic
 
