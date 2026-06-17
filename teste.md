@@ -20,22 +20,23 @@ The API proxy must define an exception and error management mechanism using Apig
 
 ## Design Decisions
 
-The current implementation evaluates only the **ProxyEndpoint**.
-
-TargetEndpoint error handling is not currently enforced and may be evaluated separately depending on BNP security requirements.
-
-A FaultRule is considered valid only if it contains at least one child configuration element.
+- The current implementation evaluates only the ProxyEndpoint.
+- TargetEndpoint error handling is not currently enforced and may be evaluated separately depending on BNP security requirements.
+- Error handling must be explicitly configured.
+- Empty FaultRule definitions are ignored because they do not provide any error management behavior.
+- The presence of either a valid FaultRule or a DefaultFaultRule is considered sufficient.
+- The plugin focuses on the existence of an error management mechanism and does not validate the internal implementation of the FaultRule or DefaultFaultRule.
 
 ## Rule Logic
 
-The plugin evaluates the **ProxyEndpoint** as follows:
+The plugin evaluates the ProxyEndpoint as follows:
 
 ### 1. Error Handling Detection
 
 The ProxyEndpoint must define at least one of the following:
 
-- A **DefaultFaultRule**
-- A **FaultRule** containing at least one child element
+- A DefaultFaultRule
+- A FaultRule containing at least one child element
 
 ### 2. Compliance Validation
 
@@ -68,16 +69,9 @@ The ProxyEndpoint is considered compliant when one of the following conditions i
 
 The following configurations are considered non-compliant:
 
-- No **FaultRule** and no **DefaultFaultRule** defined.
-- Empty **FaultRules** block (`<FaultRules/>`).
-- Empty **FaultRule** definition without any child configuration element.
-
-## Design Decisions
-
-- Error handling must be explicitly configured.
-- Empty FaultRule definitions are ignored because they do not provide any error management behavior.
-- The presence of either a valid FaultRule or a DefaultFaultRule is considered sufficient.
-- The plugin focuses on the existence of an error management mechanism and does not validate the internal implementation of the FaultRule or DefaultFaultRule.
+- No FaultRule and no DefaultFaultRule defined.
+- Empty FaultRules block (`<FaultRules/>`).
+- Empty FaultRule definition without any child configuration element.
 
 ---
 
