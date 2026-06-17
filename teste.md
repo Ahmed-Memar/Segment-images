@@ -1,7 +1,8 @@
-Design Decisions
+Non-compliant configurations:
 
-• The validation is limited to the ProxyEndpoint. TargetEndpoint error handling is not currently evaluated.
-• The plugin verifies the presence of an error-handling mechanism but does not validate the internal behavior of FaultRules or DefaultFaultRule.
+The ProxyEndpoint is non-compliant only when no non-empty error handling mechanism is found.
 
-
-An empty FaultRule.
+This includes:
+- No FaultRules and no DefaultFaultRule defined.
+- FaultRules defined but empty, with no non-empty DefaultFaultRule.
+- DefaultFaultRule defined but empty, with no non-empty FaultRule.
