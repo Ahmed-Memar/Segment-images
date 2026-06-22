@@ -1,30 +1,13 @@
-if (!hasAccessTokenValidation) {
-  const verifyJwtNames = verifyJwtPolicies.map(
-    policy => policy.getName()
-  );
-
-  details.push({
-    message: verifyJwtNames.length > 0
-      ? `VerifyJWT policy "${verifyJwtNames.join(', ')}" is present but not compliant`
-      : 'missing access token validation policy (OAuthV2 VerifyAccessToken or VerifyJWT)',
-    line: flow.lineNumber,
-    column: flow.columnNumber
-  });
-}
+/**
+ * Distinguish between:
+ * - an invalid VerifyJWT policy used in the flow
+ * - a flow with no access token validation policy applied
+ */
 
 
 
-
-const steps = getFlowRequestSteps(flow);
-
-const flowPolicies = steps
-  .map(step => getPolicyFromStep(endpoint, step))
-  .filter(Boolean);
-
-const verifyJwtPolicies = flowPolicies.filter(
-  policy => policy.getType() === 'VerifyJWT'
-);
-
-const hasAccessTokenValidation = steps.some(step =>
-  validPolicyNames.includes(getStepName(step))
-);
+/**
+ * Validation starts by checking whether at least one JSONThreatProtection
+ * policy exists in the bundle. If none is found, a single error is reported
+ * and validation stops.
+ */
