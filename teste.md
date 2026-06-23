@@ -1,90 +1,10 @@
-Evaluation
-
-Remplacer par :
-
-> The API proxy should define a DefaultFaultRule at the ProxyEndpoint level to provide default error handling.
-
-A ProxyEndpoint that defines only FaultRules without a DefaultFaultRule is considered partially compliant and generates a warning.
+The proxy bundle can expose implementation indicators, but it cannot prove end-to-end compliance because part of the control may depend on API context, platform configuration, backend behavior, or infrastructure-level enforcement.
 
 
 
-
----
-
-Design Decisions
-
-Remplacer les 2 puces par :
-
-• The validation is limited to the ProxyEndpoint.
-
-• A non-empty DefaultFaultRule is the preferred error-handling mechanism.
-  A ProxyEndpoint defining only FaultRules is reported as a warning.
-
-• The plugin verifies the presence of error-handling mechanisms but does not validate the internal behavior of FaultRules or DefaultFaultRule.
-
-
----
-
-1. Error Handling Detection
-
-Remplacer complètement par :
-
-The ProxyEndpoint is evaluated according to the following criteria:
-
-• A non-empty DefaultFaultRule
-  → PASS
-
-• One or more non-empty FaultRules without a DefaultFaultRule
-  → WARNING
-
-• No valid error-handling mechanism found
-  → ERROR
-
-
----
-
-2. Compliance Validation
-
-Remplacer le texte :
-
-These are only examples. Any DefaultFaultRule or FaultRule configuration is accepted if it contains at least one configuration element.
-
-par :
-
-These are only examples.
-
-Any non-empty DefaultFaultRule is considered compliant.
-
-A non-empty FaultRule without a DefaultFaultRule generates a warning but does not fail the validation.
-
-
----
-
-3. Non-Compliant Configurations
-
-Remplacer :
-
-ProxyEndpoint is non-compliant only when no non-empty error handling mechanism is found.
-
-par :
-
-ProxyEndpoint is non-compliant when neither a non-empty DefaultFaultRule nor a non-empty FaultRule is defined.
-
-
----
-
-Ajouter une section Warning Configurations (recommandé)
-
-Entre Compliance Validation et Non-Compliant Configurations :
-
-3. Warning Configurations
-
-The following configuration generates a warning:
-
-• One or more non-empty FaultRules are defined, but no DefaultFaultRule exists.
-
-Puis renuméroter :
-
-4. Non-Compliant Configurations
-
-Cette version est maintenant parfaitement alignée avec la logique du plugin.
+| Matrix column name | Verifiable from API proxy only? | Why | Relevant Policies | How? | Automate? | Why? |
+|-------------------|----------------------------------|-----|-------------------|-------|-----------|------|
+| Credential type | Partial | Accepted authentication mechanisms can be detected from policies in the proxy, but alignment with API sensitivity and client type cannot be verified from the bundle alone. | OAuthV2, VerifyJWT, VerifyAPIKey, BasicAuthentication | Not implemented. Covered by EX-CS009 Access Token Control for OAuthV2 / VerifyJWT cases. | No | Already covered by EX-CS009 Access Token Control. A separate plugin would add little value and may create overlapping findings. |
+| TLS | Partial | VirtualHost references are visible in the ProxyEndpoint, but the actual TLS configuration is defined outside the proxy bundle at VirtualHost, platform, load balancer, or infrastructure level. | ProxyEndpoint (VirtualHost - HTTPS) | Not implemented. | No | The bundle cannot prove that TLS is enabled or correctly configured. Checking only for the presence of a VirtualHost has low security value and may generate misleading results. |
+| Client / API authentication | Partial | Authentication policies attached to PreFlow or flows are visible, but the required authentication level depends on API sensitivity and client context, which are not available in the bundle. | OAuthV2, VerifyJWT, VerifyAPIKey, BasicAuthentication | Not implemented. Covered by EX-CS009 Access Token Control for OAuthV2 / VerifyJWT enforcement. | No | Mostly overlaps with Access Token Control. A generic plugin cannot determine whether the detected mechanism is the appropriate one for the API context. |
+| Consumer app. IP whitelisting | Partial | IP allowlisting may be implemented in the proxy, but it can also be enforced outside the bundle at WAF, firewall, load balancer, API gateway, or infrastructure level. | AccessControl, Flow Conditions, RaiseFault, JavaScript (custom allowlist logic), ExtractVariables | Not implemented. | No | Absence of IP filtering logic in the proxy does not prove absence of IP filtering. High false-positive risk. |
