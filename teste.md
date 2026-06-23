@@ -1,6 +1,16 @@
-Exigence	Why (Automate? = No)
-
-Coarse-grained authorization enforcement	Authorization can be implemented through scopes, claims, flow conditions, or custom logic. A generic plugin cannot reliably verify correct enforcement.
-End-to-end API call tracking	Correlation IDs can be generated or propagated through multiple patterns. A generic plugin cannot reliably verify tracking enforcement.
-Consumer app. IP whitelisting	IP filtering may be implemented through proxy logic or infrastructure controls. A generic plugin cannot reliably verify IP allowlisting.
-
+| Requirement | Why (Verifiable?) | How | Why (Automatable?) |
+|------------|-------------------|------|--------------------|
+| Credential type | Authentication mechanisms are visible in the proxy, but required credential type depends on API context. | Not implemented. Covered by Access Token Control. | Already covered by Access Token Control. |
+| TLS | VirtualHost references are visible, but TLS configuration is defined outside the proxy bundle. | Not implemented. | The proxy bundle cannot reliably verify TLS configuration. |
+| Client / API authentication | Authentication policies are visible, but required authentication depends on API context. | Not implemented. Covered by Access Token Control. | A generic plugin cannot determine whether the detected mechanism is appropriate. |
+| Consumer app. IP whitelisting | IP filtering may be implemented in the proxy or outside the proxy. | Not implemented. | A generic plugin cannot reliably verify IP allowlisting. |
+| DDOS prevention | API rate limiting through SpikeArrest is visible in the proxy bundle. | Verify that a SpikeArrest policy exists and is enforced. | SpikeArrest presence and coverage can be reliably verified. |
+| Access token control | Token validation policies are explicitly configured in the proxy. | Verify that a token validation policy exists and is enforced. | Explicit Apigee policies can be reliably verified. |
+| Coarse-grained authorization enforcement | Authorization may use scopes, claims, flow conditions, or custom logic. | Not implemented. | A generic plugin cannot reliably verify correct authorization enforcement. |
+| End-to-end API call tracking | Tracking identifiers may be generated or propagated by the proxy. | Not implemented. | A generic plugin cannot reliably verify tracking enforcement. |
+| Injection attacks prevention | Threat protection policies are explicitly configured in the proxy. | Verify policy presence, coverage, and required parameters. | Explicit Apigee policies can be reliably verified. |
+| HTTP methods control | Allowed methods are explicitly enforced in proxy flows. | Verify that only approved methods are accepted. | Method restrictions can be reliably verified. |
+| HTTP response sanitizing | Response sanitization may be implemented in different ways. | Not implemented. | A generic plugin cannot reliably determine whether sanitization is sufficient. |
+| Data schema controls | Schema validation policies are explicitly configured in the proxy. | Verify policy presence, coverage, and required parameters. | Explicit validation policies can be reliably verified. |
+| Data integrity control | Some integrity indicators may be visible, but integrity enforcement is API-specific. | Not implemented. | A generic plugin cannot reliably verify data integrity enforcement. |
+| Exception & error management | Error handling is explicitly configured through FaultRules and DefaultFaultRule. | Verify that a valid error handling mechanism exists. | Explicit Apigee constructs can be reliably verified. |
