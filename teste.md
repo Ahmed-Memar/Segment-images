@@ -1,5 +1,7 @@
-| Matrix column name | Verifiable from API proxy only? | Why | Relevant Policies | How? | Automate? | Why? |
-|--------------------|--------------------------------|------|-------------------|-------|-----------|------|
-| Access token type | Partial | The token type (JWT or opaque) can often be inferred from token validation policies, but the expected type depends on API context and security requirements. | VerifyJWT, OAuthV2 (VerifyAccessToken / Introspection), DecodeJWT | Not implemented. | No | The bundle may reveal the token type in use, but cannot determine whether it matches the expected security requirement. |
-| Refresh token lifespan | Partial | Refresh token lifetime is usually configured in the Authorization Server and is not visible in the proxy bundle. | OAuthV2 (GenerateAccessToken / RefreshTokenExpiresIn) only if proxy acts as Authorization Server | Not implemented. | No | In most cases the value is managed outside the proxy and cannot be reliably verified from the bundle. |
-| Access token lifespan | Partial | Access token lifetime is usually defined by the Authorization Server and is not visible in the proxy bundle. | OAuthV2 (GenerateAccessToken / ExpiresIn) only if proxy acts as Authorization Server | Not implemented. | No | In most cases the value is managed outside the proxy and cannot be reliably verified from the bundle. |
+| Matrix column name | Verifiable from API proxy only? | How? | Automate? | Why? |
+|-------------------|----------------------------------|-------|-----------|-------|
+| Credential type | Partial | Detect OAuth/JWT/authentication mechanisms used toward backend. | No | The bundle provides indicators but cannot reliably prove which credential type is required or effectively used. |
+| Grant OAuth2 | Partial | Detect OAuth token exchange policies if present. | No | Trust-boundary decisions are business-dependent and cannot be inferred from the bundle alone. |
+| Access token type | Partial | Detect JWT generation or token propagation toward backend. | No | The actual token format sent to the backend cannot always be reliably determined. |
+| TLS | Yes | Verify HTTPS TargetEndpoint and SSLInfo configuration. | Yes | Backend TLS configuration is explicitly visible in the proxy bundle. |
+| API / Backend authentication | Partial | Detect backend authentication mechanisms (OAuth, BasicAuth, JWT, etc.). | No | Presence of authentication-related configuration does not reliably prove enforcement or correctness. |
