@@ -1,4 +1,1 @@
-| Matrix column name | Verifiable from API proxy only? | How? | Automate? | Why? |
-|-------------------|----------------------------------|-------|-----------|-------|
-| API / Backend authentication | Partial | Not implemented. | No | The bundle may reveal authentication mechanisms, but cannot reliably verify that backend authentication is required, correctly configured, or compliant with the expected security model. |
-| End-to-end API call tracking | Partial | Not implemented. | No | Correlation headers or logging may be present, but the bundle cannot prove end-to-end traceability across downstream systems. |
+L'absence de SSLInfo dans le bundle ne prouve pas l'absence de TLS vers le backend puisque la configuration réelle du TargetServer est externe au bundle.
