@@ -1,3 +1,4 @@
-| Policy | Security Interest? | Security Purpose | Existing Requirement | Plugin Candidate? | Notes |
-|--------|---------------------|------------------|----------------------|-------------------|-------|
-| AccessEntity | Yes (Indirect) | Retrieves entity information (App, API Product, Developer, Consumer Key) to support dynamic security or business logic. | None (supporting policy) | No | Provides data used by other policies but does not enforce security by itself. |
+| Policy | Description | Security Interest? | Security Purpose | Existing Requirement | Plugin Candidate? | Notes |
+|--------|-------------|--------------------|------------------|----------------------|-------------------|-------|
+| AccessControl | Restricts or allows client requests based on IP address rules (allowlist/blocklist). | Yes | Restrict access to APIs based on client IP addresses. | Consumer app. IP whitelisting | No | IP filtering may also be enforced by a WAF, firewall, or load balancer, so a generic plugin would generate false positives. |
+| AccessEntity | Retrieves information about Apigee entities (Developer, App, API Product, Consumer Key, etc.) for use in proxy logic. | No | — | None | No | Utility policy used to retrieve data. It does not enforce any security control by itself. |
