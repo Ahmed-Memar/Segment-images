@@ -1,3 +1,3 @@
 | Policy | Security Interest? | Security Purpose | Existing Requirement | Plugin Candidate? | Notes |
 |--------|---------------------|------------------|----------------------|-------------------|-------|
-| AccessControl | Yes | Restricts API access based on client IP addresses (IP allowlist/blocklist). | Consumer app. IP whitelisting | No | IP filtering may also be enforced by a WAF, firewall, or load balancer, so a generic plugin would generate false positives. |
+| AccessEntity | Yes (Indirect) | Retrieves entity information (App, API Product, Developer, Consumer Key) to support dynamic security or business logic. | None (supporting policy) | No | Provides data used by other policies but does not enforce security by itself. |
