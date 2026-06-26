@@ -1,11 +1,112 @@
-| Matrix column name | Verifiable from API proxy only? | Why | Relevant Policies | How? | Automate? | Why? |
-|-------------------|----------------------------------|-----|-------------------|------|-----------|------|
-| Data schema controls | Yes | Schema validation policies are explicitly configured in the proxy bundle. | OASValidation (REST/JSON APIs), SOAPMessageValidation (SOAP/XML APIs) | Verify policy presence, coverage, and required parameters. | Yes | Explicit schema validation policies can be reliably verified from the bundle. |
-| Data integrity control | Partial | Some integrity indicators may be visible in the proxy, but end-to-end integrity enforcement depends on API-specific mechanisms and external components. | SSLInfo (transport integrity via TLS), VerifyJWT (signed token integrity, if applicable), TargetEndpoint | Not implemented. | No | A generic plugin cannot reliably determine whether data integrity requirements are fully enforced. |
-| Exception & error management | Yes | Error handling mechanisms are explicitly defined through FaultRules and DefaultFaultRule in the proxy configuration. | FaultRules, DefaultFaultRule | Verify that a non-empty DefaultFaultRule exists. If only non-empty FaultRules are present, report a warning. If no valid error-handling mechanism exists, report an error. | Yes | Explicit Apigee error-handling constructs can be reliably verified. |
-| Credential type (backend) | Partial | Authentication mechanisms used toward the backend can be detected, but whether the selected credential type is appropriate depends on backend security requirements. | AssignMessage (Authorization header), ServiceCallout, BasicAuthentication, OAuthV2, GenerateJWT, JavaScript (custom auth logic), TargetEndpoint | Detect authentication mechanisms used toward the backend. | No | The bundle may reveal authentication mechanisms, but cannot determine whether the selected credential type complies with backend security requirements. |
-| Grant OAuth2 (backend) | Partial | OAuth2 token exchange can be detected when implemented in the proxy, but trust-boundary requirements cannot be inferred from the bundle alone. | OAuthV2 (GenerateAccessToken), ServiceCallout (external AS), AssignMessage (token request construction) | Detect OAuth2 token exchange mechanisms if present. | No | Whether token exchange is required depends on architecture and trust boundaries outside the bundle. |
-| Access token type (backend) | Partial | The token format sent to the backend may be visible, but whether it satisfies the security requirement cannot be determined generically. | GenerateJWT, OAuthV2, AssignMessage (Authorization header), ServiceCallout | Detect JWT generation or token propagation toward the backend. | No | The actual token type used can sometimes be inferred, but a generic plugin cannot determine whether it is the expected one. |
-| TLS (backend) | Partial | HTTPS/TLS indicators are visible in the TargetEndpoint configuration, but some TLS details may be managed outside the proxy bundle (e.g. TargetServer configuration). | TargetEndpoint (HTTPTargetConnection), SSLInfo, TargetServer (if used) | Verify HTTPS TargetEndpoint usage and SSLInfo configuration. | Yes | TLS usage toward the backend can be partially verified from the bundle through TargetEndpoint and SSLInfo configuration. |
-| API / Backend authentication | Partial | Backend authentication mechanisms may be visible in request-processing logic, but authentication requirements depend on backend architecture and security model. | AssignMessage, ServiceCallout, BasicAuthentication, OAuthV2, GenerateJWT, JavaScript (custom auth logic), TargetEndpoint | Detect authentication mechanisms used toward the backend. | No | The bundle may reveal authentication mechanisms but cannot determine whether backend authentication is required or sufficiently enforced. |
-| End-to-end API call tracking (backend) | Partial | Correlation identifiers may be generated, propagated, or logged by the proxy, but end-to-end traceability across downstream systems cannot be verified. | AssignMessage (correlation headers), ExtractVariables, MessageLogging, JavaScript (custom correlation logic), ServiceCallout | Detect correlation ID propagation and logging mechanisms. | No | The bundle cannot prove end-to-end traceability across backend and downstream systems. |
+
+1. TLS (backend)
+
+Remplacer
+
+Automate? = Yes
+
+Par
+
+Automate? = No
+
+Remplacer le Why (Automate)
+
+Par :
+
+The bundle may expose TLS indicators (SSLInfo), but absence of SSLInfo does not reliably prove that backend communication is not protected by TLS because TargetServer and infrastructure configuration may be external to the bundle.
+
+
+---
+
+2. DDoS prevention
+
+Remplacer le Why (Verifiable)
+
+Par :
+
+API rate-limiting mechanisms such as SpikeArrest are visible in the proxy bundle, but DDoS protection may also rely on external infrastructure controls.
+
+Remplacer le Why (Automate)
+
+Par :
+
+SpikeArrest presence and coverage can be reliably verified, but this only verifies API-level rate limiting, not full DDoS protection.
+
+Ajouter dans Relevant Policies
+
+Ajouter :
+
+Quota
+
+Donc :
+
+SpikeArrest, Quota
+
+
+---
+
+3. Access Token Control
+
+Remplacer le How
+
+Par :
+
+Verify that OAuthV2 (VerifyAccessToken) or VerifyJWT exists and is attached to the PreFlow or all applicable request flows. Validate required policy parameters.
+
+Plus précis que simplement vérifier la présence.
+
+
+---
+
+4. HTTP Methods Control
+
+Remplacer le How
+
+Par :
+
+Verify that only approved HTTP methods are accepted and that unsupported methods are rejected through RaiseFault or equivalent logic.
+
+
+---
+
+5. Injection Attacks Prevention
+
+Ajouter dans Relevant Policies
+
+Ajouter :
+
+RegularExpressionProtection
+
+Donc :
+
+JSONThreatProtection, XMLThreatProtection, RegularExpressionProtection
+
+⚠️ Seulement si vous considérez que l'exigence couvre aussi les paramètres et non uniquement les payloads JSON/XML.
+
+
+---
+
+6. Data Integrity Control
+
+Remplacer Relevant Policies
+
+Actuellement tu as probablement :
+
+SSLInfo, VerifyJWT
+
+Je mettrais plutôt :
+
+VerifyJWT, GenerateJWT, JavaScript (custom signature/HMAC validation)
+
+Car TLS protège le transport, pas l'intégrité métier des données.
+
+
+---
+
+7. Data Schema Controls
+
+Remplacer le How
+
+Par :
+
+Verify policy presence, flow coverage, required parameters, and that the referenced schema/specification exists.
