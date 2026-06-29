@@ -1,6 +1,5 @@
 | Policy | Description | Security Interest? | Security Purpose | Existing Requirement | Plugin Candidate? | Notes |
 |--------|-------------|--------------------|------------------|----------------------|-------------------|-------|
-| PopulateCache | Stores data or responses in the Apigee cache for later reuse. | No | — | — | No | Performance optimization only. |
-| LookupCache | Retrieves previously cached data. | No | — | — | No | Performance optimization only. |
-| InvalidateCache | Removes entries from the Apigee cache. | No | — | — | No | Cache management only. |
-| ResponseCache | Caches backend responses before returning them to clients. | Yes (Low) | Can help prevent unnecessary backend calls but may affect handling of sensitive cached data. | None (no generic security requirement) | No | Security impact depends entirely on API context and cached content. |
+| ExtensionCallout | Calls an external service through an Apigee Extension. | Yes (Indirect) | Can integrate with external security services such as Secret Manager, KMS, antivirus, or IAM. | Multiple (context-dependent) | No | Generic policy. Its security purpose depends entirely on the external service being called. |
+| ExtractVariables | Extracts values from requests or responses into Apigee flow variables. | Yes (Indirect) | Frequently used to extract security-related information (JWT claims, API keys, scopes, correlation IDs) for later validation. | Multiple (context-dependent) | No | Does not enforce any security control by itself. |
+| FlowCallout | Invokes a reusable Shared Flow. | Yes (Indirect) | Can execute reusable security logic such as authentication, authorization, threat protection, or logging. | Multiple (context-dependent) | No | The security purpose depends entirely on the referenced Shared Flow. |
