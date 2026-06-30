@@ -1,4 +1,5 @@
 | Policy | Description | Security Interest? | Security Purpose | Existing Requirement | Plugin Candidate? | Notes |
 |--------|-------------|--------------------|------------------|----------------------|-------------------|-------|
-| JSONThreatProtection | Validates JSON payloads against configurable limits (depth, array size, object entries, string length, etc.) to protect against malicious payloads. | Yes | Prevents JSON-based payload attacks and resource exhaustion. | Injection attacks prevention | Yes | Already implemented as a security plugin. |
-| JSONtoXML | Converts a JSON payload into an XML document. | No | — | — | No | Data transformation policy only; provides no security control by itself. |
+| GenerateJWS | Generates a JSON Web Signature (JWS) to digitally sign data. | Yes | Ensures message authenticity and integrity through digital signatures. | Data integrity control | No | Strong security mechanism, but its use depends on the API security architecture. |
+| VerifyJWS | Verifies the signature and integrity of a JSON Web Signature (JWS). | Yes | Validates message authenticity and integrity before processing. | Data integrity control | No | Presence alone cannot determine whether JWS validation is required for the API. |
+| DecodeJWS | Decodes a JSON Web Signature (JWS) without verifying its signature. | Yes (Indirect) | Extracts JWS header and payload for later processing. | Data integrity control | No | Does not provide any security guarantee by itself; should normally be used together with VerifyJWS. |
