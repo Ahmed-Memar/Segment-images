@@ -1,13 +1,10 @@
-/**
- * Distinguish between:
- * - an invalid VerifyJWT policy used in the flow
- * - a flow with no access token validation policy applied
- */
+stages:
+  - test
 
-
-
-/**
- * Validation starts by checking whether at least one JSONThreatProtection
- * policy exists in the bundle. If none is found, a single error is reported
- * and validation stops.
- */
+test_pipeline:
+  stage: test
+  image: node:20
+  script:
+    - echo "Pipeline is running"
+    - node --version
+    - npm --version
