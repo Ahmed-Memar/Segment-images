@@ -1,1 +1,1 @@
-J'ai essayé avec npm set strict-ssl false. L'erreur SELF_SIGNED_CERT_IN_CHAIN a disparu, mais maintenant npm install échoue avec une erreur E401 - Incorrect or missing password. Est-ce qu'il y a une configuration particulière à utiliser dans les pipelines pour accéder à l'Artifactory ?
+.
