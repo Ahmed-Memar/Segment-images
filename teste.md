@@ -1,1 +1,1 @@
-J'ai réussi à faire fonctionner la pipeline avec l'image Docker BNP. Node et npm s'exécutent correctement. Par contre, je bloque sur npm install, qui échoue avec une erreur SELF_SIGNED_CERT_IN_CHAIN en essayant de télécharger les dépendances depuis l'Artifactory. Est-ce qu'il y a une configuration particulière à utiliser pour que npm install fonctionne dans les pipelines ?
+.
