@@ -1,38 +1,94 @@
-script:
-  - echo "Pipeline is running"
-  - node --version
-  - npm --version
-  - |
-    AUTH_B64=$(printf "%s:%s" "$ARTIFACTORY_PROD_USER" "$ARTIFACTORY_PROD_PASSWORD" | base64 | tr -d '\n')
+include:
+  # Shared CI/CD configuration.
+  - project: 'Production-Mutualisee/IPS/IDO/gitlab-cicd/pipelines'
+    file: '.gitlab-ci.yml'
 
-    cat > "$HOME/.npmrc" <<EOF
-    registry=https://repo.artifactory-dogen.group.echonet/artifactory/api/npm/registry.npmjs.org/
-    //repo.artifactory-dogen.group.echonet/artifactory/api/npm/registry.npmjs.org/:_auth=${AUTH_B64}
-    always-auth=true
-    strict-ssl=false
-    EOF
+stages:
+  - test
 
-  - npm install
-  - node node_modules/apigeelint/cli.js -f json.js -x security-lint-plugins -e EX-CS001,EX-CS002,EX-CS003,EX-CS004,EX-CS005,EX-CS006,EX-CS007,EX-CS008,EX-CS010 -s apiproxies/access-token-control/test-access-token-04-jwt-algo-mixed-errors/ -w apigeelint-results.json -q || true
-  - node convert-apigeelint-to-gitlab-sast.js apigeelint-results.json gl-sast-report.json
-  - ls -la
+default:
+  # Node.js runtime.
+  image: $CI_REGISTRY/node:25.8.1-yarn-v2
 
+test_pipeline:
+  stage: test
 
+  script:
+    # Display runtime versions.
+    - echo "Pipeline is running"
+    - node --version
+    - npm --version
 
+    # Configure npm authentication.
+    - |
+      AUTH_B64=$(printf "%s:%s" "$ARTIFACTORY_PROD_USER" "$ARTIFACTORY_PROD_PASSWORD" | base64 | tr -d '\n')
 
+      cat > "$HOME/.npmrc" <<EOF
+      registry=https://repo.artifactory-dogen.group.echonet/artifactory/api/npm/registry.npmjs.org/
+      //repo.artifactory-dogen.group.echonet/artifactory/api/npm/registry.npmjs.org/:_auth=${AUTH_B64}
+      always-auth=true
+      strict-ssl=false
+      EOF
 
+    # Install project dependencies.
+    - npm install
 
+    # Run ApigeeLint and capture its exit code.
+    - |
+      set +e
 
+      node node_modules/apigeelint/cli.js \
+        -f json.js \
+        -x security-lint-plugins \
+        -s apiproxies/ \
+        -w apigeelint-results.json \
+        -q \
+        2> apigeelint-stderr.log
 
+      APIGEELINT_EXIT=$?
 
+      set -e
 
+      echo "ApigeeLint exit code: ${APIGEELINT_EXIT}"
 
+      # Ensure the report was generated.
+      if [ ! -s apigeelint-results.json ]; then
+        echo "Missing or empty ApigeeLint report."
+        cat apigeelint-stderr.log || true
+        exit 1
+      fi
 
-artifacts:
-  when: always
-  reports:
-    sast: gl-sast-report.json
-  paths:
-    - apigeelint-results.json
-    - gl-sast-report.json
-  expire_in: 1 week
+      # Validate JSON syntax.
+      node -e "JSON.parse(require('fs').readFileSync('apigeelint-results.json','utf8'))"
+
+      # Validate expected report structure.
+      node -e "const r=JSON.parse(require('fs').readFileSync('apigeelint-results.json','utf8')); if(!Array.isArray(r)){console.error('Invalid report structure');process.exit(1);}"
+
+    # Convert to GitLab SAST format.
+    - node convert-apigeelint-to-gitlab-sast.js apigeelint-results.json gl-sast-report.json
+
+    # Ensure the SAST report is valid.
+    - |
+      if [ ! -s gl-sast-report.json ]; then
+        echo "Missing GitLab SAST report."
+        exit 1
+      fi
+
+      node -e "JSON.parse(require('fs').readFileSync('gl-sast-report.json','utf8'))"
+
+  artifacts:
+    # Always upload analysis outputs.
+    when: always
+
+    reports:
+      # GitLab Security report.
+      sast: gl-sast-report.json
+
+    # Keep raw outputs for debugging.
+    paths:
+      - apigeelint-results.json
+      - apigeelint-stderr.log
+      - gl-sast-report.json
+
+    # Artifact retention period.
+    expire_in: 1 week
