@@ -1,39 +1,19 @@
-stages:
-  - build
-  - test
-
-
-
-
-
 build_scanner_image:
   stage: build
 
-  # Internal BNP image containing Buildah.
-  image:
-    name: $CI_REGISTRY/buildah:0.2-beta
+  extends: .buildah:build
 
   variables:
-    # Configuration recommended for rootless Buildah.
-    BUILDAH_ISOLATION: chroot
-    STORAGE_DRIVER: vfs
+    IMAGE_NAME: apigeelint-security-plugins
+    BUILD_CONTEXT: .
 
-  script:
-    # Display the Buildah version.
-    - buildah --version
 
-    # Build the ApigeeLint security scanner image.
-    - |
-      buildah bud \
-        --file Dockerfile \
-        --tag apigeelint-security:$CI_COMMIT_SHORT_SHA \
-        --build-arg CI_REGISTRY="$CI_REGISTRY" \
-        --build-arg ARTIFACTORY_PROD_USER="$ARTIFACTORY_PROD_USER" \
-        --build-arg ARTIFACTORY_PROD_PASSWORD="$ARTIFACTORY_PROD_PASSWORD" \
-        .
 
-    # Confirm that the image was created.
-    - buildah images
 
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "docker-runtime"'
+include:
+  - project: 'Production-mutualisee/IPS/IDO/gitlab-cicd/pipelines'
+    file: '.gitlab-ci.yml'
+
+  - project: 'market-place/a100133/ci-cd/gitlab-ci-templates'
+    ref: '0.16.4'
+    file: 'buildah/buildah.yml'
