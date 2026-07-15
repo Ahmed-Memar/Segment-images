@@ -1,8 +1,20 @@
+include:
+  - project: 'Production-mutualisee/IPS/IDO/gitlab-cicd/pipelines'
+    file: '.gitlab-ci.yml'
+
+stages:
+  - build
+  - test
+
 build_scanner_image:
   stage: build
 
   image:
-    name: image-registry.openshift-image-registry.svc:5000/ns001b004551/buildah:0.2-beta
+    name: fr2.icr.io/a100133-hprd/builder:latest
+    pull_policy: always
+
+  tags:
+    - a100133-buildah
 
   variables:
     BUILDAH_ISOLATION: chroot
@@ -24,3 +36,9 @@ build_scanner_image:
 
   rules:
     - if: '$CI_COMMIT_BRANCH == "docker-runtime"'
+
+default:
+  image: $CI_REGISTRY/node:25.8.1-yarn-v2
+
+test_pipeline:
+  stage: test
