@@ -1,119 +1,50 @@
-#!/usr/bin/env node
+test_npm_package:
+  stage: package
 
-const { spawnSync } = require("node:child_process");
-const path = require("node:path");
+  script:
+    # Configure npm authentication exactly like the existing job.
+    - |
+      AUTH_B64=$(printf "%s:%s" "$ARTIFACTORY_PROD_USER" "$ARTIFACTORY_PROD_PASSWORD" | base64 | tr -d '\n')
 
-const packageRoot = path.resolve(__dirname, "..");
+      cat > "$HOME/.npmrc" <<EOF
+      registry=https://repo.artifactory-dogen.group.echonet/artifactory/api/npm/registry.npmjs.org/
+      //repo.artifactory-dogen.group.echonet/artifactory/api/npm/registry.npmjs.org/:_auth=${AUTH_B64}
+      always-auth=true
+      strict-ssl=false
+      EOF
 
-function printUsage() {
-  console.log(`
-Usage:
-  apigeelint-security scan [proxy-root]
+    # Install dependencies and create the package tarball.
+    - npm ci
+    - npm pack
 
-Example:
-  apigeelint-security scan apiproxies
-`);
-}
+    # Install the generated package in an isolated directory.
+    - mkdir package-consumer
+    - cd package-consumer
+    - npm init -y
+    - npm install ../apigeelint-security-plugins-0.1.0.tgz
 
-const [, , command, proxyRootArg] = process.argv;
+    # Run the packaged CLI against the repository test bundles.
+    - npx apigeelint-security scan ../apiproxies
 
-if (command !== "scan") {
-  printUsage();
-  process.exit(1);
-}
+    # Validate the generated SAST report.
+    - test -s gl-sast-report.json
+    - node -e "JSON.parse(require('fs').readFileSync('gl-sast-report.json', 'utf8'))"
 
-const proxyRoot = path.resolve(process.cwd(), proxyRootArg || "apiproxies");
-
-const scan = spawnSync(
-  "bash",
-  [path.join(packageRoot, "scripts", "run-all-apiproxies.sh")],
-  {
-    cwd: process.cwd(),
-    stdio: "inherit",
-    env: {
-      ...process.env,
-      APIGEE_PROXY_ROOT: proxyRoot,
-      APIGEELINT_PACKAGE_ROOT: packageRoot,
-    },
-  }
-);
-
-if (scan.error) {
-  console.error(`Unable to start the scanner: ${scan.error.message}`);
-  process.exit(1);
-}
-
-if (scan.status !== 0) {
-  process.exit(scan.status ?? 1);
-}
-
-const conversion = spawnSync(
-  process.execPath,
-  [
-    path.join(packageRoot, "convert-apigeelint-to-gitlab-sast.js"),
-    "apigeelint-results.json",
-    "gl-sast-report.json",
-  ],
-  {
-    cwd: process.cwd(),
-    stdio: "inherit",
-  }
-);
-
-if (conversion.error) {
-  console.error(`Unable to convert the report: ${conversion.error.message}`);
-  process.exit(1);
-}
-
-process.exit(conversion.status ?? 0);
+  artifacts:
+    when: always
+    paths:
+      - apigeelint-security-plugins-0.1.0.tgz
+      - package-consumer/apigeelint-results.json
+      - package-consumer/apigeelint-stderr.log
+      - package-consumer/gl-sast-report.json
+    expire_in: 1 week
 
 
 
 
 
 
-PACKAGE_ROOT="${APIGEELINT_PACKAGE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
-
-
-
-
-node "$PACKAGE_ROOT/node_modules/apigeelint/cli.js" \
-
-
-
-
-
--x "$PACKAGE_ROOT/security-lint-plugins" \
-
-
-
-
-
-{
-  "name": "apigeelint-security-plugins",
-  "version": "0.1.0",
-  "description": "ApigeeLint security scanner with custom API security plugins",
-  "private": true,
-  "license": "UNLICENSED",
-  "bin": {
-    "apigeelint-security": "bin/apigeelint-security.js"
-  },
-  "files": [
-    "bin/",
-    "scripts/",
-    "security-lint-plugins/",
-    "convert-apigeelint-to-gitlab-sast.js",
-    "README.md"
-  ],
-  "scripts": {
-    "sec-audit": "node node_modules/apigeelint/cli.js -f table.js -x security-lint-plugins/",
-    "pack:check": "npm pack --dry-run"
-  },
-  "dependencies": {
-    "apigeelint": "2.77.1"
-  },
-  "engines": {
-    "node": ">=20"
-  }
-}
+stages:
+  - package
+  - test
