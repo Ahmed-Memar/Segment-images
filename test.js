@@ -1,46 +1,21 @@
+cat > .gitlab-ci.yml <<'EOF'
 include:
+  # Variables et définitions CI partagées.
   - project: 'Production-mutualisee/IPS/IDO/gitlab-cicd/pipelines'
     file: '.gitlab-ci.yml'
 
-  - local: '/ci/apigeelint-security.yml'
-
-
-
-
-
-
-
+  # Scanner ApigeeLint Security réutilisable.
+  - project: 'gf/ITG-ITRMG/CDF-EXI-AppSec/appsec-tools/apigeelint-security-plugins'
+    ref: 'v0.1.0'
+    file: '/ci/apigeelint-security.yml'
 
 variables:
-  # Path of the repository containing the npm scanner package.
-  APIGEELINT_SECURITY_PROJECT_PATH: "$CI_PROJECT_PATH"
+  # Projet qui contient le package npm du scanner.
+  APIGEELINT_SECURITY_PROJECT_PATH: 'gf/ITG-ITRMG/CDF-EXI-AppSec/appsec-tools/apigeelint-security-plugins'
 
-  # During development, install the exact commit being tested.
-  APIGEELINT_SECURITY_REF: "$CI_COMMIT_SHA"
+  # Version immuable du scanner.
+  APIGEELINT_SECURITY_REF: 'v0.1.0'
 
-  # Test bundles contained in this repository.
-  APIGEE_PROXY_ROOT: "apiproxies"
-
-
-
-
-
-
-
-
-
-
-include:
-  - project: 'Production-mutualisee/IPS/IDO/gitlab-cicd/pipelines'
-    file: '.gitlab-ci.yml'
-
-  - local: '/ci/apigeelint-security.yml'
-
-variables:
-  APIGEELINT_SECURITY_PROJECT_PATH: "$CI_PROJECT_PATH"
-  APIGEELINT_SECURITY_REF: "$CI_COMMIT_SHA"
-  APIGEE_PROXY_ROOT: "apiproxies"
-
-stages:
-  - package
-  - test
+  # Racine contenant les bundles Apigee de ce dépôt consommateur.
+  APIGEE_PROXY_ROOT: 'apiproxies'
+EOF
