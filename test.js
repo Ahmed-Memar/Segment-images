@@ -1,44 +1,119 @@
-include:
-  - project: 'Production-mutualisee/IPS/IDO/gitlab-cicd/pipelines'
-    file: '.gitlab-ci.yml'
+#!/usr/bin/env node
 
-stages:
-  - build
-  - test
+const { spawnSync } = require("node:child_process");
+const path = require("node:path");
 
-build_scanner_image:
-  stage: build
+const packageRoot = path.resolve(__dirname, "..");
 
-  image:
-    name: fr2.icr.io/a100133-hprd/builder:latest
-    pull_policy: always
+function printUsage() {
+  console.log(`
+Usage:
+  apigeelint-security scan [proxy-root]
 
-  tags:
-    - a100133-buildah
+Example:
+  apigeelint-security scan apiproxies
+`);
+}
 
-  variables:
-    BUILDAH_ISOLATION: chroot
-    STORAGE_DRIVER: vfs
+const [, , command, proxyRootArg] = process.argv;
 
-  script:
-    - buildah --version
+if (command !== "scan") {
+  printUsage();
+  process.exit(1);
+}
 
-    - |
-      buildah bud \
-        --file Dockerfile \
-        --tag apigeelint-security-plugins:$CI_COMMIT_SHORT_SHA \
-        --build-arg CI_REGISTRY="$CI_REGISTRY" \
-        --build-arg ARTIFACTORY_PROD_USER="$ARTIFACTORY_PROD_USER" \
-        --build-arg ARTIFACTORY_PROD_PASSWORD="$ARTIFACTORY_PROD_PASSWORD" \
-        .
+const proxyRoot = path.resolve(process.cwd(), proxyRootArg || "apiproxies");
 
-    - buildah images
+const scan = spawnSync(
+  "bash",
+  [path.join(packageRoot, "scripts", "run-all-apiproxies.sh")],
+  {
+    cwd: process.cwd(),
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      APIGEE_PROXY_ROOT: proxyRoot,
+      APIGEELINT_PACKAGE_ROOT: packageRoot,
+    },
+  }
+);
 
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "docker-runtime"'
+if (scan.error) {
+  console.error(`Unable to start the scanner: ${scan.error.message}`);
+  process.exit(1);
+}
 
-default:
-  image: $CI_REGISTRY/node:25.8.1-yarn-v2
+if (scan.status !== 0) {
+  process.exit(scan.status ?? 1);
+}
 
-test_pipeline:
-  stage: test
+const conversion = spawnSync(
+  process.execPath,
+  [
+    path.join(packageRoot, "convert-apigeelint-to-gitlab-sast.js"),
+    "apigeelint-results.json",
+    "gl-sast-report.json",
+  ],
+  {
+    cwd: process.cwd(),
+    stdio: "inherit",
+  }
+);
+
+if (conversion.error) {
+  console.error(`Unable to convert the report: ${conversion.error.message}`);
+  process.exit(1);
+}
+
+process.exit(conversion.status ?? 0);
+
+
+
+
+
+
+PACKAGE_ROOT="${APIGEELINT_PACKAGE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+
+
+
+
+
+node "$PACKAGE_ROOT/node_modules/apigeelint/cli.js" \
+
+
+
+
+
+-x "$PACKAGE_ROOT/security-lint-plugins" \
+
+
+
+
+
+{
+  "name": "apigeelint-security-plugins",
+  "version": "0.1.0",
+  "description": "ApigeeLint security scanner with custom API security plugins",
+  "private": true,
+  "license": "UNLICENSED",
+  "bin": {
+    "apigeelint-security": "bin/apigeelint-security.js"
+  },
+  "files": [
+    "bin/",
+    "scripts/",
+    "security-lint-plugins/",
+    "convert-apigeelint-to-gitlab-sast.js",
+    "README.md"
+  ],
+  "scripts": {
+    "sec-audit": "node node_modules/apigeelint/cli.js -f table.js -x security-lint-plugins/",
+    "pack:check": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "apigeelint": "2.77.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
