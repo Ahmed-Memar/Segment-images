@@ -1,1 +1,0 @@
-Salut, j'ai créé un nouveau dépôt GitLab pour tester mon scanner, mais le push est refusé car il n'y a pas de branche par défaut (main). Est-ce que tu peux créer la branche main (même avec un README vide) ou initialiser le dépôt ? Après ça je pourrai pousser ma branche de test. Merci !
