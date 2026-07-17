@@ -1,50 +1,56 @@
-# Reusable GitLab CI template for the ApigeeLint security scanner.
+# Internal development pipeline for the ApigeeLint security scanner.
 #
-# Consumer projects only need to:
-#   1. include this file from an immutable Git tag;
-#   2. define APIGEELINT_SECURITY_PROJECT_PATH;
-#   3. optionally override APIGEE_PROXY_ROOT.
+# It validates two distinct use cases:
 #
-# The scanner generates a native GitLab SAST report without requiring the
-# consumer repository to copy scanner code, plugins, or conversion scripts.
+# 1. test_npm_package
+#    Packages the code from the current branch and installs it in an isolated
+#    directory. This detects missing files, broken package metadata and CLI
+#    resolution problems before a release is created.
+#
+# 2. apigeelint_security_sast
+#    Comes from the reusable local CI template and validates the scanner through
+#    the same interface used by consumer repositories.
+
+include:
+  # Shared corporate variables and CI definitions.
+  - project: "Production-mutualisee/IPS/IDO/gitlab-cicd/pipelines"
+    file: ".gitlab-ci.yml"
+
+  # Reusable scanner job maintained in this repository.
+  - local: "/ci/apigeelint-security.yml"
 
 variables:
-  # Directory in the consumer repository containing the Apigee proxy bundles.
-  APIGEE_PROXY_ROOT: "apiproxies"
+  # During this repository's own pipeline, the scanner source project is the
+  # current project.
+  APIGEELINT_SECURITY_PROJECT_PATH: "$CI_PROJECT_PATH"
 
-  # Immutable Git reference used to install the scanner package.
+  # Released scanner version tested by the reusable consumer-style job.
   APIGEELINT_SECURITY_REF: "v0.1.0"
 
-  # Store downloaded npm packages inside the project workspace so GitLab can
-  # cache them between pipelines.
-  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+  # Test bundles stored in this repository.
+  APIGEE_PROXY_ROOT: "apiproxies"
 
-apigeelint_security_sast:
-  stage: test
+stages:
+  - package
+  - test
 
-  # Use the centrally available Node.js image already authorized by the shared
-  # runners.
-  image:
-    name: "$CI_REGISTRY/node:25.8.1-yarn-v2"
+default:
+  # Centrally available Node.js runtime already accepted by shared runners.
+  image: "$CI_REGISTRY/node:25.8.1-yarn-v2"
 
-  cache:
-    # A different scanner version receives a separate dependency cache.
-    key: "apigeelint-security-${APIGEELINT_SECURITY_REF}"
-    paths:
-      - .npm/
+test_npm_package:
+  stage: package
 
-  before_script:
-    # Validate variables required to download the scanner and dependencies.
+  script:
+    # Validate the credentials needed to download npm dependencies.
     - |
       set -eu
 
-      : "${APIGEELINT_SECURITY_PROJECT_PATH:?APIGEELINT_SECURITY_PROJECT_PATH is required}"
-      : "${APIGEELINT_SECURITY_REF:?APIGEELINT_SECURITY_REF is required}"
       : "${ARTIFACTORY_PROD_USER:?ARTIFACTORY_PROD_USER is required}"
       : "${ARTIFACTORY_PROD_PASSWORD:?ARTIFACTORY_PROD_PASSWORD is required}"
 
-    # Configure npm authentication for dependencies downloaded through the
-    # internal Artifactory npm registry.
+    # Configure npm to download dependencies through the internal Artifactory
+    # registry without storing a permanent token in the repository.
     - |
       AUTH_B64="$(
         printf '%s:%s' \
@@ -62,38 +68,44 @@ apigeelint_security_sast:
 
       chmod 600 "$HOME/.npmrc"
 
-  script:
-    # Install the immutable scanner version directly from its GitLab project.
-    # CI_JOB_TOKEN avoids distributing a permanent repository access token.
-    - |
-      npm install \
-        --no-save \
-        --no-audit \
-        --no-fund \
-        --prefer-offline \
-        "git+https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${APIGEELINT_SECURITY_PROJECT_PATH}.git#${APIGEELINT_SECURITY_REF}"
+    # Install exactly the dependency versions recorded in package-lock.json.
+    - npm ci --no-audit --no-fund
 
-    # Ensure that npm correctly exposed the packaged CLI executable.
+    # Build the package tarball from the current branch and capture its generated
+    # filename instead of hard-coding the package version.
+    - PACKAGE_TARBALL="$(npm pack --silent)"
+    - test -s "$PACKAGE_TARBALL"
+    - printf '%s\n' "$PACKAGE_TARBALL" > package-tarball-name.txt
+
+    # Create an isolated directory that behaves like an external consumer.
+    - mkdir package-consumer
+    - cd package-consumer
+    - npm init -y
+
+    # Install only the generated package, not the current repository directly.
+    - PACKAGE_TARBALL="$(cat ../package-tarball-name.txt)"
+    - npm install --no-audit --no-fund "../${PACKAGE_TARBALL}"
+
+    # Verify that npm exposed the public CLI declared in package.json.
     - test -x ./node_modules/.bin/apigeelint-security
 
-    # Scan every Apigee bundle and generate gl-sast-report.json.
-    - ./node_modules/.bin/apigeelint-security scan "$APIGEE_PROXY_ROOT"
+    # Run the packaged scanner against this repository's proxy test bundles.
+    - ./node_modules/.bin/apigeelint-security scan ../apiproxies
 
-    # Fail on a missing, empty, or invalid GitLab SAST report.
+    # Validate the raw and GitLab SAST reports generated by the package.
+    - test -s apigeelint-results.json
     - test -s gl-sast-report.json
+    - node -e "JSON.parse(require('fs').readFileSync('apigeelint-results.json', 'utf8'))"
     - node -e "JSON.parse(require('fs').readFileSync('gl-sast-report.json', 'utf8'))"
 
   artifacts:
-    # Preserve diagnostic files even when a technical failure occurs.
+    # Keep diagnostic outputs even if package installation or scanning fails.
     when: always
 
-    reports:
-      # Makes findings visible in GitLab's Security interface.
-      sast: gl-sast-report.json
-
     paths:
-      - apigeelint-results.json
-      - apigeelint-stderr.log
-      - gl-sast-report.json
+      - "*.tgz"
+      - package-consumer/apigeelint-results.json
+      - package-consumer/apigeelint-stderr.log
+      - package-consumer/gl-sast-report.json
 
     expire_in: 1 week
