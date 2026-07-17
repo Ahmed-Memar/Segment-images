@@ -8,14 +8,11 @@ const crypto = require("node:crypto");
 const packageMetadata = require("./package.json");
 const apigeelintMetadata = require("apigeelint/package.json");
 
-const inputFile =
-  process.argv[2] || "apigeelint-results.json";
-
-const outputFile =
-  process.argv[3] || "gl-sast-report.json";
+const inputFile = process.argv[2] || "apigeelint-results.json";
+const outputFile = process.argv[3] || "gl-sast-report.json";
 
 /**
- * Converts an ApigeeLint file path into a project-relative Unix path.
+ * Converts a path returned by ApigeeLint into a project-relative Unix path.
  *
  * @param {string} filePath Path returned by ApigeeLint.
  * @returns {string} Normalized project-relative path.
@@ -25,11 +22,11 @@ function normalizePath(filePath) {
     return "unknown";
   }
 
-  let normalized = String(filePath).replaceAll("\\", "/");
+  let normalized = String(filePath).replace(/\\/g, "/");
 
   const projectDir = (
     process.env.CI_PROJECT_DIR || process.cwd()
-  ).replaceAll("\\", "/");
+  ).replace(/\\/g, "/");
 
   if (normalized.startsWith(`${projectDir}/`)) {
     normalized = normalized.slice(projectDir.length + 1);
@@ -47,7 +44,7 @@ function normalizePath(filePath) {
 function stableUuid(value) {
   const hash = crypto
     .createHash("sha256")
-    .update(value)
+    .update(String(value))
     .digest("hex")
     .slice(0, 32);
 
@@ -56,9 +53,9 @@ function stableUuid(value) {
     hash.slice(8, 12),
     `4${hash.slice(13, 16)}`,
     (
-      (Number.parseInt(hash.slice(16, 17), 16) & 0x3) |
-      0x8
-    ).toString(16) + hash.slice(17, 20),
+      ((Number.parseInt(hash.slice(16, 17), 16) & 0x3) | 0x8)
+        .toString(16) + hash.slice(17, 20)
+    ),
     hash.slice(20, 32),
   ].join("-");
 }
@@ -84,19 +81,19 @@ function mapSeverity(value) {
 }
 
 /**
- * Returns the current UTC timestamp.
+ * Returns the current timestamp in RFC 3339 format.
  *
- * @returns {string} RFC 3339 timestamp.
+ * @returns {string} Current UTC timestamp.
  */
 function getTimestamp() {
   return new Date().toISOString();
 }
 
 /**
- * Encodes HTML-sensitive characters for safe display in GitLab.
+ * Encodes HTML characters so messages are displayed as plain text.
  *
- * @param {string} text Message to encode.
- * @returns {string} HTML-encoded message.
+ * @param {string} text Text to encode.
+ * @returns {string} HTML-encoded text.
  */
 function htmlEncode(text) {
   return String(text)
@@ -121,13 +118,9 @@ function readApigeeLintReport(filePath) {
   let report;
 
   try {
-    report = JSON.parse(
-      fs.readFileSync(filePath, "utf8"),
-    );
+    report = JSON.parse(fs.readFileSync(filePath, "utf8"));
   } catch (error) {
-    throw new Error(
-      `Unable to parse ${filePath}: ${error.message}`,
-    );
+    throw new Error(`Unable to parse ${filePath}: ${error.message}`);
   }
 
   if (!Array.isArray(report)) {
@@ -140,9 +133,7 @@ function readApigeeLintReport(filePath) {
 }
 
 /**
- * Converts an ApigeeLint report into a GitLab SAST report.
- *
- * @returns {void}
+ * Converts an ApigeeLint JSON report into a GitLab SAST report.
  */
 function main() {
   const apigeeResults = readApigeeLintReport(inputFile);
@@ -156,12 +147,9 @@ function main() {
       : [];
 
     for (const message of messages) {
-      const ruleId = String(
-        message.ruleId || "APIGEELINT",
-      );
+      const ruleId = String(message.ruleId || "APIGEELINT");
 
       const parsedLine = Number(message.line);
-
       const line =
         Number.isInteger(parsedLine) && parsedLine > 0
           ? parsedLine
@@ -205,7 +193,6 @@ function main() {
             type: "apigeelint_rule_id",
             name: `ApigeeLint rule ${ruleId}`,
             value: ruleId,
-            url: "https://github.com/apigee/apigeelint",
           },
         ],
       });
@@ -225,23 +212,18 @@ function main() {
         id: "apigeelint-security-plugins",
         name: "ApigeeLint Security Plugins",
         version: packageMetadata.version,
-
         vendor: {
           name: "Internal",
         },
-
-        url: "https://github.com/apigee/apigeelint",
       },
 
       scanner: {
         id: "apigeelint",
         name: "ApigeeLint",
         version: apigeelintMetadata.version,
-
         vendor: {
           name: "Apigee",
         },
-
         url: "https://github.com/apigee/apigeelint",
       },
 
@@ -257,6 +239,7 @@ function main() {
   fs.writeFileSync(
     outputFile,
     JSON.stringify(gitlabSastReport, null, 2),
+    "utf8",
   );
 
   console.log(
@@ -267,9 +250,6 @@ function main() {
 try {
   main();
 } catch (error) {
-  console.error(
-    `SAST conversion failed: ${error.message}`,
-  );
-
+  console.error(`SAST conversion failed: ${error.message}`);
   process.exit(1);
 }
