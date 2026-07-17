@@ -1,141 +1,99 @@
-#!/usr/bin/env node
+# Reusable GitLab CI template for the ApigeeLint security scanner.
+#
+# Consumer projects only need to:
+#   1. include this file from an immutable Git tag;
+#   2. define APIGEELINT_SECURITY_PROJECT_PATH;
+#   3. optionally override APIGEE_PROXY_ROOT.
+#
+# The scanner generates a native GitLab SAST report without requiring the
+# consumer repository to copy scanner code, plugins, or conversion scripts.
 
-"use strict";
+variables:
+  # Directory in the consumer repository containing the Apigee proxy bundles.
+  APIGEE_PROXY_ROOT: "apiproxies"
 
-const { spawnSync } = require("node:child_process");
-const path = require("node:path");
+  # Immutable Git reference used to install the scanner package.
+  APIGEELINT_SECURITY_REF: "v0.1.0"
 
-/**
- * Absolute path to the installed scanner package.
- *
- * The CLI may be executed from any consumer repository. Resolving paths from
- * the package directory ensures that bundled scripts and converters are found
- * independently of the consumer project's directory structure.
- *
- * @type {string}
- */
-const packageRoot = path.resolve(__dirname, "..");
+  # Store downloaded npm packages inside the project workspace so GitLab can
+  # cache them between pipelines.
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
 
-/**
- * Displays the public command-line interface of the scanner.
- *
- * This function is called when the supplied command is missing or unsupported.
- *
- * @returns {void}
- */
-function printUsage() {
-  console.log(`
-Usage:
-  apigeelint-security scan [proxy-root]
+apigeelint_security_sast:
+  stage: test
 
-Example:
-  apigeelint-security scan apiproxies
-`);
-}
+  # Use the centrally available Node.js image already authorized by the shared
+  # runners.
+  image:
+    name: "$CI_REGISTRY/node:25.8.1-yarn-v2"
 
-/**
- * Executes a child process while forwarding its output directly to the caller.
- *
- * The consumer pipeline therefore receives the original scanner logs instead
- * of buffered or reformatted output.
- *
- * @param {string} executable Executable to run.
- * @param {string[]} args Arguments passed to the executable.
- * @param {NodeJS.ProcessEnv} [env=process.env] Environment of the child process.
- * @returns {number} Child-process exit code.
- */
-function runCommand(executable, args, env = process.env) {
-  const result = spawnSync(executable, args, {
-    cwd: process.cwd(),
-    stdio: "inherit",
-    env,
-  });
+  cache:
+    # A different scanner version receives a separate dependency cache.
+    key: "apigeelint-security-${APIGEELINT_SECURITY_REF}"
+    paths:
+      - .npm/
 
-  if (result.error) {
-    console.error(
-      `Unable to start "${executable}": ${result.error.message}`,
-    );
-    return 1;
-  }
+  before_script:
+    # Validate variables required to download the scanner and dependencies.
+    - |
+      set -eu
 
-  if (result.signal) {
-    console.error(
-      `"${executable}" was terminated by signal ${result.signal}.`,
-    );
-    return 1;
-  }
+      : "${APIGEELINT_SECURITY_PROJECT_PATH:?APIGEELINT_SECURITY_PROJECT_PATH is required}"
+      : "${APIGEELINT_SECURITY_REF:?APIGEELINT_SECURITY_REF is required}"
+      : "${ARTIFACTORY_PROD_USER:?ARTIFACTORY_PROD_USER is required}"
+      : "${ARTIFACTORY_PROD_PASSWORD:?ARTIFACTORY_PROD_PASSWORD is required}"
 
-  return result.status ?? 1;
-}
+    # Configure npm authentication for dependencies downloaded through the
+    # internal Artifactory npm registry.
+    - |
+      AUTH_B64="$(
+        printf '%s:%s' \
+          "$ARTIFACTORY_PROD_USER" \
+          "$ARTIFACTORY_PROD_PASSWORD" |
+        base64 |
+        tr -d '\n'
+      )"
 
-/**
- * Runs the complete Apigee security analysis.
- *
- * The current implementation delegates bundle discovery and ApigeeLint
- * execution to the packaged Bash script, then converts the aggregated findings
- * into GitLab's SAST report format.
- *
- * Generated files are written into the current consumer repository:
- *
- * - apigeelint-results.json
- * - apigeelint-stderr.log
- * - gl-sast-report.json
- *
- * @param {string} proxyRoot Root directory containing the Apigee bundles.
- * @returns {number} Zero when scan and conversion succeed; otherwise non-zero.
- */
-function scanProxies(proxyRoot) {
-  const scanScript = path.join(
-    packageRoot,
-    "scripts",
-    "run-all-apiproxies.sh",
-  );
+      cat > "$HOME/.npmrc" <<EOF
+      registry=https://repo.artifactory-dogen.group.echonet/artifactory/api/npm/registry.npmjs.org/
+      //repo.artifactory-dogen.group.echonet/artifactory/api/npm/registry.npmjs.org/:_auth=${AUTH_B64}
+      strict-ssl=false
+      EOF
 
-  const scanStatus = runCommand(
-    "bash",
-    [scanScript],
-    {
-      ...process.env,
-      APIGEE_PROXY_ROOT: proxyRoot,
-      APIGEELINT_PACKAGE_ROOT: packageRoot,
-    },
-  );
+      chmod 600 "$HOME/.npmrc"
 
-  if (scanStatus !== 0) {
-    return scanStatus;
-  }
+  script:
+    # Install the immutable scanner version directly from its GitLab project.
+    # CI_JOB_TOKEN avoids distributing a permanent repository access token.
+    - |
+      npm install \
+        --no-save \
+        --no-audit \
+        --no-fund \
+        --prefer-offline \
+        "git+https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${APIGEELINT_SECURITY_PROJECT_PATH}.git#${APIGEELINT_SECURITY_REF}"
 
-  const converter = path.join(
-    packageRoot,
-    "convert-apigeelint-to-gitlab-sast.js",
-  );
+    # Ensure that npm correctly exposed the packaged CLI executable.
+    - test -x ./node_modules/.bin/apigeelint-security
 
-  return runCommand(process.execPath, [
-    converter,
-    "apigeelint-results.json",
-    "gl-sast-report.json",
-  ]);
-}
+    # Scan every Apigee bundle and generate gl-sast-report.json.
+    - ./node_modules/.bin/apigeelint-security scan "$APIGEE_PROXY_ROOT"
 
-/**
- * Parses CLI arguments and starts the requested operation.
- *
- * @returns {number} Process exit code.
- */
-function main() {
-  const [, , command, proxyRootArg] = process.argv;
+    # Fail on a missing, empty, or invalid GitLab SAST report.
+    - test -s gl-sast-report.json
+    - node -e "JSON.parse(require('fs').readFileSync('gl-sast-report.json', 'utf8'))"
 
-  if (command !== "scan") {
-    printUsage();
-    return 1;
-  }
+  artifacts:
+    # Preserve diagnostic files even when a technical failure occurs.
+    when: always
 
-  const proxyRoot = path.resolve(
-    process.cwd(),
-    proxyRootArg || "apiproxies",
-  );
+    reports:
+      # Makes findings visible in GitLab's Security interface.
+      sast: gl-sast-report.json
 
-  return scanProxies(proxyRoot);
-}
+    paths:
+      - apigeelint-results.json
+      - apigeelint-stderr.log
+      - gl-sast-report.json
 
-process.exitCode = main();
+    expire_in: 1 week
