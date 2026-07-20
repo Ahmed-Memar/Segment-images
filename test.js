@@ -1,255 +1,145 @@
-#!/usr/bin/env node
+Oui. Il reste trois modifications importantes avant le commit :
 
-"use strict";
+1. fixer le chemin du projet scanner dans le template CI ;
 
-const fs = require("node:fs");
-const crypto = require("node:crypto");
 
-const packageMetadata = require("./package.json");
-const apigeelintMetadata = require("apigeelint/package.json");
+2. faire tester à votre pipeline le commit actuel, pas l’ancien tag v0.1.0 ;
 
-const inputFile = process.argv[2] || "apigeelint-results.json";
-const outputFile = process.argv[3] || "gl-sast-report.json";
 
-/**
- * Converts a path returned by ApigeeLint into a project-relative Unix path.
- *
- * @param {string} filePath Path returned by ApigeeLint.
- * @returns {string} Normalized project-relative path.
- */
-function normalizePath(filePath) {
-  if (!filePath) {
-    return "unknown";
-  }
+3. remplacer entièrement le README par une version plus courte, séparant consommateurs et développeurs.
 
-  let normalized = String(filePath).replace(/\\/g, "/");
 
-  const projectDir = (
-    process.env.CI_PROJECT_DIR || process.cwd()
-  ).replace(/\\/g, "/");
 
-  if (normalized.startsWith(`${projectDir}/`)) {
-    normalized = normalized.slice(projectDir.length + 1);
-  }
+1. Modifier ci/apigeelint-security.yml
 
-  return normalized.replace(/^\.\/+/, "") || "unknown";
-}
+Au début du fichier, remplace le bloc variables: actuel par :
 
-/**
- * Creates a deterministic UUID for a finding.
- *
- * @param {string} value Stable finding key.
- * @returns {string} UUID-like identifier.
- */
-function stableUuid(value) {
-  const hash = crypto
-    .createHash("sha256")
-    .update(String(value))
-    .digest("hex")
-    .slice(0, 32);
+variables:
+  # Internal project containing the scanner package.
+  APIGEELINT_SECURITY_PROJECT_PATH: "gf/ITG-ITRMG/CDF-EXI-AppSec/appsec-tools/apigeelint-security-plugins"
 
-  return [
-    hash.slice(0, 8),
-    hash.slice(8, 12),
-    `4${hash.slice(13, 16)}`,
-    (
-      ((Number.parseInt(hash.slice(16, 17), 16) & 0x3) | 0x8)
-        .toString(16) + hash.slice(17, 20)
-    ),
-    hash.slice(20, 32),
-  ].join("-");
-}
+  # Scanner version installed by consumer projects.
+  APIGEELINT_SECURITY_REF: "v0.2.0"
 
-/**
- * Maps an ApigeeLint severity to a GitLab SAST severity.
- *
- * @param {number|string} value ApigeeLint severity.
- * @returns {"High"|"Medium"|"Low"} GitLab severity.
- */
-function mapSeverity(value) {
-  const severity = String(value).toLowerCase();
+  # Directory searched recursively for Apigee proxy bundles.
+  APIGEE_PROXY_ROOT: "apiproxies"
 
-  if (severity === "2" || severity === "error") {
-    return "High";
-  }
+  # Project-local npm cache.
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
 
-  if (severity === "1" || severity === "warning") {
-    return "Medium";
-  }
+Le reste de ci/apigeelint-security.yml ne change pas.
 
-  return "Low";
-}
+Pourquoi v0.2.0 ? Parce que v0.1.0 existe déjà et pointe vers l’ancienne version. Les modifications actuelles devront être publiées avec un nouveau tag.
 
-/**
- * Returns the current timestamp in RFC 3339 format.
- *
- * @returns {string} Current UTC timestamp.
- */
-function getTimestamp() {
-  return new Date().toISOString();
-}
 
-/**
- * Encodes HTML characters so messages are displayed as plain text.
- *
- * @param {string} text Text to encode.
- * @returns {string} HTML-encoded text.
- */
-function htmlEncode(text) {
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+---
 
-/**
- * Reads and validates the ApigeeLint JSON report.
- *
- * @param {string} filePath Input report path.
- * @returns {Array<object>} ApigeeLint results.
- */
-function readApigeeLintReport(filePath) {
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`Input file not found: ${filePath}`);
-  }
+2. Modifier .gitlab-ci.yml du dépôt scanner
 
-  let report;
+Dans le dépôt du scanner, tu avais actuellement :
 
-  try {
-    report = JSON.parse(fs.readFileSync(filePath, "utf8"));
-  } catch (error) {
-    throw new Error(`Unable to parse ${filePath}: ${error.message}`);
-  }
+variables:
+  APIGEELINT_SECURITY_PROJECT_PATH: "$CI_PROJECT_PATH"
+  APIGEELINT_SECURITY_REF: "v0.1.0"
+  APIGEE_PROXY_ROOT: "apiproxies"
 
-  if (!Array.isArray(report)) {
-    throw new Error(
-      "Unexpected ApigeeLint JSON format: expected an array.",
-    );
-  }
+Remplace-le par :
 
-  return report;
-}
+variables:
+  APIGEELINT_SECURITY_PROJECT_PATH: "$CI_PROJECT_PATH"
 
-/**
- * Converts an ApigeeLint JSON report into a GitLab SAST report.
- */
-function main() {
-  const apigeeResults = readApigeeLintReport(inputFile);
-  const vulnerabilities = [];
+  # Test the package from the exact commit currently running.
+  APIGEELINT_SECURITY_REF: "$CI_COMMIT_SHA"
 
-  for (const fileResult of apigeeResults) {
-    const filePath = normalizePath(fileResult.filePath);
+  APIGEE_PROXY_ROOT: "apiproxies"
 
-    const messages = Array.isArray(fileResult.messages)
-      ? fileResult.messages
-      : [];
+C’est important : avant, ton pipeline testait toujours l’ancien package du tag v0.1.0. Avec $CI_COMMIT_SHA, il testera réellement les modifications que tu viens de faire.
 
-    for (const message of messages) {
-      const ruleId = String(message.ruleId || "APIGEELINT");
+L’include local reste :
 
-      const parsedLine = Number(message.line);
-      const line =
-        Number.isInteger(parsedLine) && parsedLine > 0
-          ? parsedLine
-          : 1;
+include:
+  - project: 'Production-mutualisee/IPS/IDO/gitlab-cicd/pipelines'
+    file: '.gitlab-ci.yml'
 
-      const text = htmlEncode(
-        message.message || "ApigeeLint finding",
-      );
+  - local: '/ci/apigeelint-security.yml'
 
-      const severity = mapSeverity(message.severity);
 
-      const stableKey = [
-        ruleId,
-        filePath,
-        line,
-        text,
-      ].join("|");
+---
 
-      vulnerabilities.push({
-        id: stableUuid(stableKey),
-        category: "sast",
-        name: `ApigeeLint ${ruleId}`,
-        message: text,
-        description: `ApigeeLint rule ${ruleId}: ${text}`,
-        severity,
-        confidence: "Medium",
+3. Mettre la version npm à jour
 
-        scanner: {
-          id: "apigeelint",
-          name: "ApigeeLint",
-        },
+Dans package.json, remplace :
 
-        location: {
-          file: filePath,
-          start_line: line,
-          end_line: line,
-        },
+"version": "0.1.0"
 
-        identifiers: [
-          {
-            type: "apigeelint_rule_id",
-            name: `ApigeeLint rule ${ruleId}`,
-            value: ruleId,
-          },
-        ],
-      });
-    }
-  }
+par :
 
-  const timestamp = getTimestamp();
+"version": "0.2.0"
 
-  const gitlabSastReport = {
-    version: "15.2.4",
+Puis mets à jour automatiquement package-lock.json :
 
-    schema:
-      "https://gitlab.com/gitlab-org/security-products/security-report-schemas/-/raw/master/dist/sast-report-format.json",
+npm install --package-lock-only
 
-    scan: {
-      analyzer: {
-        id: "apigeelint-security-plugins",
-        name: "ApigeeLint Security Plugins",
-        version: packageMetadata.version,
-        vendor: {
-          name: "Internal",
-        },
-      },
+Vérifie ensuite :
 
-      scanner: {
-        id: "apigeelint",
-        name: "ApigeeLint",
-        version: apigeelintMetadata.version,
-        vendor: {
-          name: "Apigee",
-        },
-        url: "https://github.com/apigee/apigeelint",
-      },
+grep -n '"version"' package.json package-lock.json | head
 
-      type: "sast",
-      start_time: timestamp,
-      end_time: timestamp,
-      status: "success",
-    },
+Tu dois voir 0.2.0 pour le package principal dans les deux fichiers.
 
-    vulnerabilities,
-  };
 
-  fs.writeFileSync(
-    outputFile,
-    JSON.stringify(gitlabSastReport, null, 2),
-    "utf8",
-  );
+4. Vérifications avant commit
 
-  console.log(
-    `Converted ${vulnerabilities.length} ApigeeLint findings to ${outputFile}`,
-  );
-}
+Exécute exactement :
 
-try {
-  main();
-} catch (error) {
-  console.error(`SAST conversion failed: ${error.message}`);
-  process.exit(1);
-}
+bash -n scripts/scan-all-apigee-proxies.sh
+
+node --check bin/apigeelint-security.js
+
+node --check convert-apigeelint-to-gitlab-sast.js
+
+npm ci
+
+npm run scan -- apiproxies
+
+node -e "JSON.parse(require('fs').readFileSync('gl-sast-report.json', 'utf8')); console.log('SAST report valid')"
+
+npm run pack:check
+
+Puis vérifie les références restantes :
+
+grep -R "run-all-apiproxies\|v0.1.0\|Dockerfile\|dockerignore" \
+  --exclude-dir=node_modules \
+  --exclude-dir=.git \
+  .
+
+Le résultat ne doit contenir aucune ancienne référence utile. Une occurrence dans un historique ou un fichier généré ne compte pas.
+
+Supprime les rapports locaux :
+
+rm -f apigeelint-results.json apigeelint-stderr.log gl-sast-report.json
+
+Puis :
+
+git status
+
+5. Commit et push
+
+Comme les fichiers sont déjà staged, après les dernières modifications fais :
+
+git add README.md package.json package-lock.json .gitlab-ci.yml ci/apigeelint-security.yml
+
+Puis :
+
+git diff --cached --stat
+
+git diff --cached
+
+Si tout est correct :
+
+git commit -m "Finalize npm scanner and reusable CI template"
+
+Puis :
+
+git push origin docker-runtime
+
+Ne crée pas encore le tag v0.2.0 sur cette branche. Attends que le pipeline réussisse et que les changements soient fusionnés dans main.
