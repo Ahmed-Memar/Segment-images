@@ -8,7 +8,9 @@ generates a GitLab SAST report.
 
 ## Consumer usage
 
-### GitLab CI
+Two options are available:
+
+### 1. GitLab CI — Recommended
 
 GitLab CI is the recommended way to use the scanner.
 
@@ -49,14 +51,14 @@ variables:
 
 `ref` and `APIGEELINT_SECURITY_REF` must use the same scanner version.
 
-### Configurable values
+#### Configurable values
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `APIGEE_PROXY_ROOT` | `apiproxies` | Root directory searched recursively for `apiproxy` bundles. |
 | `APIGEELINT_SECURITY_REF` | `v0.2.0` | Version of the scanner package installed by the CI job. |
 
-### Generated reports
+#### Generated reports
 
 The CI job generates:
 
@@ -71,7 +73,7 @@ gl-sast-report.json
 ApigeeLint findings do not stop the scan. A job fails only when the scanner
 cannot run or cannot generate a valid report.
 
-## Optional local usage for consumers
+### 2. Local execution — Optional
 
 Local execution can be used to check a proxy before pushing changes.
 
