@@ -175,35 +175,30 @@ apiproxies/
     Test bundles used only by the scanner project.
 ```
 
+
 ### Native ApigeeLint exclusions
 
-The scanner owns the default native ApigeeLint exclusion list.
+The scanner defines a default list of native ApigeeLint exclusions.
 
-Consumer projects normally should not change it. For exceptional cases, the
-entire list can be overridden with:
+In exceptional cases, the list can be overridden using
+`APIGEELINT_EXCLUDED_RULES`.
 
-```yaml
-variables:
-  APIGEELINT_EXCLUDED_RULES: "BN005,BN006,..."
-```
 
-This replaces the default list; it does not append rules to it.
+### Release process
 
-## Release process
+Scanner versions are published as immutable Git tags.
 
-Scanner versions are immutable Git tags.
+To publish a new scanner version:
 
-For a new release:
-
-1. update the version in `package.json`;
+1. set the scanner version in `package.json`;
 2. update `package-lock.json`;
-3. update the default version in `ci/apigeelint-security.yml`;
-4. update the README examples;
-5. run the local validation commands;
+3. set the default version in `ci/apigeelint-security.yml`;
+4. update the README if required;
+5. run the validation commands;
 6. commit and push the changes;
-7. confirm that the GitLab pipeline succeeds;
+7. verify that the GitLab pipeline succeeds;
 8. merge the branch;
-9. create and push the matching Git tag.
+9. create and push the corresponding Git tag.
 
 Example:
 
@@ -212,5 +207,5 @@ git tag -a v0.2.0 -m "ApigeeLint security scanner v0.2.0"
 git push origin v0.2.0
 ```
 
-Consumer projects should always use a version tag and never `main` or a
-development branch.
+Consumer projects should always reference a released version tag rather than
+`main` or a development branch.
