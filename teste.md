@@ -71,7 +71,7 @@ gl-sast-report.json
 ApigeeLint findings do not stop the scan. A job fails only when the scanner
 cannot run or cannot generate a valid report.
 
-### Optional local usage for consumers
+## Optional local usage for consumers
 
 Local execution can be used to check a proxy before pushing changes.
 
