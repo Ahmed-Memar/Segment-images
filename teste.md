@@ -60,13 +60,6 @@ variables:
 The scanner project path and CI template path are internal implementation
 details and should not be changed by consumer projects.
 
-Examples of proxy locations:
-
-```text
-apiproxies/
-services/apiproxies/
-src/main/apigee/
-```
 
 ### Generated reports
 
