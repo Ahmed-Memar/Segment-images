@@ -178,10 +178,7 @@ apiproxies/
 
 ### Native ApigeeLint exclusions
 
-The scanner defines a default list of native ApigeeLint exclusions.
-
-In exceptional cases, the list can be overridden using
-`APIGEELINT_EXCLUDED_RULES`.
+The scanner excludes a predefined set of native ApigeeLint rules by default.
 
 
 ### Release process
