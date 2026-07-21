@@ -66,8 +66,7 @@ apigeelint-stderr.log
 gl-sast-report.json
 ```
 
-`gl-sast-report.json` is published as a GitLab SAST report and its findings are
-available in the pipeline Security tab.
+`gl-sast-report.json` is published as a GitLab SAST report. After the pipeline completes, open the pipeline and go to the **Security** tab to review the detected findings.
 
 ApigeeLint findings do not stop the scan. A job fails only when the scanner
 cannot run or cannot generate a valid report.
