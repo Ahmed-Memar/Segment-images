@@ -12,6 +12,25 @@ generates a GitLab SAST report.
 
 GitLab CI is the recommended way to use the scanner.
 
+A minimal consumer repository can use the following structure:
+
+```text
+consumer-project/
+├── .gitlab-ci.yml
+└── apiproxies/
+    ├── proxy1/
+    │   └── apiproxy/
+    └── proxy2/
+        └── apiproxy/
+```
+
+The scanner searches recursively for directories named `apiproxy`, so a
+consumer repository can contain one or several proxies under the same root
+directory.
+
+If the root directory is not named `apiproxies`, update
+`APIGEE_PROXY_ROOT` in `.gitlab-ci.yml`.
+
 Add the following configuration to the consumer project's `.gitlab-ci.yml`:
 
 ```yaml
