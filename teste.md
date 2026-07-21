@@ -52,14 +52,9 @@ variables:
 ### Configurable values
 
 | Variable | Default | Description |
-|---|---|---|
-| `APIGEE_PROXY_ROOT` | `apiproxies` | Directory searched recursively for `apiproxy` bundles |
-| `APIGEELINT_SECURITY_REF` | `v0.2.0` | Scanner package version installed by the CI job |
-| `APIGEELINT_EXCLUDED_RULES` | Scanner defaults | Optional complete override of the native ApigeeLint exclusion list |
-
-The scanner project path and CI template path are internal implementation
-details and should not be changed by consumer projects.
-
+|----------|---------|-------------|
+| `APIGEE_PROXY_ROOT` | `apiproxies` | Root directory searched recursively for `apiproxy` bundles. |
+| `APIGEELINT_SECURITY_REF` | `v0.2.0` | Version of the scanner package installed by the CI job. |
 
 ### Generated reports
 
