@@ -1,41 +1,24 @@
-/**
- * Returns the current UTC timestamp in the format required by
- * the GitLab security report schema.
- *
- * @returns {string} Timestamp formatted as YYYY-MM-DDTHH:mm:ss.
- */
-function getTimestamp() {
-  return new Date()
-    .toISOString()
-    .replace(/\.\d{3}Z$/, "");
-}
+## Summary
 
+Packages the ApigeeLint security scanner as a reusable npm CLI and provides a shared GitLab CI template for consumer projects.
 
+## Main changes
 
+- added the `apigeelint-security` CLI;
+- added recursive discovery of `apiproxy` bundles;
+- packaged custom security plugins and the GitLab SAST converter;
+- added the reusable CI template `ci/apigeelint-security.yml`;
+- removed the abandoned Docker and Buildah implementation;
+- updated the GitLab SAST report generation;
+- fixed the GitLab timestamp format;
+- updated the README and release documentation.
 
-node --check convert-apigeelint-to-gitlab-sast.js
+## Validation
 
-
-
-
-npm run scan -- apiproxies
-
-
-
-
-
-node -e "const r=require('./gl-sast-report.json'); console.log('start_time:', r.scan.start_time); console.log('end_time:', r.scan.end_time)"
-
-
-
-
-
-
-node -e "const r=require('./gl-sast-report.json'); const p=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/; if(!p.test(r.scan.start_time)||!p.test(r.scan.end_time)){console.error('Invalid GitLab timestamps');process.exit(1)} console.log('GitLab timestamps valid')"
-
-
-
-
-
-
-rm -f apigeelint-results.json apigeelint-stderr.log gl-sast-report.json
+- local scan completed successfully on 51 Apigee proxy bundles;
+- npm package contents validated with `npm pack --dry-run`;
+- scanner project pipeline succeeded;
+- package tested from tag `v0.2.0`;
+- consumer project pipeline succeeded;
+- GitLab accepted the generated SAST report;
+- 362 vulnerabilities are displayed in the consumer project's Security tab.
