@@ -12,8 +12,6 @@ Two options are available:
 
 ### 1. GitLab CI — Recommended
 
-GitLab CI is the recommended way to use the scanner.
-
 The scanner expects a repository structure similar to the following:
 
 ```text
