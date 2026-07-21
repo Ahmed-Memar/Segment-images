@@ -6,13 +6,40 @@ This repository provides an Apigee security scanner based on
 It recursively discovers Apigee proxy bundles, runs the security controls and
 generates a GitLab SAST report.
 
+## How it works
+
+The reusable CI job:
+
+1. installs a tagged version of this repository as an npm package;
+2. recursively discovers every directory named `apiproxy`;
+3. runs ApigeeLint with the custom security plugins;
+4. merges the findings from all discovered bundles;
+5. generates a GitLab SAST report.
+
+Consumer projects do not need to copy the scanner plugins, scripts or
+converter.
+
 ## Consumer usage
 
 Two options are available:
 
 ### 1. GitLab CI — Recommended
 
-A typical consumer repository has the following structure:
+#### Prerequisites
+
+Before using the scanner:
+
+- the consumer project must contain one or more Apigee proxy bundles;
+- the scanner project must authorize the consumer project or its parent group
+  in **Settings > CI/CD > Job token permissions**;
+- the corporate Artifactory configuration and credentials used by the shared
+  pipeline must be available to the CI job.
+
+The scanner package is installed directly from its GitLab repository.
+Therefore, the CI job token allowlist must be configured before the consumer
+pipeline can install and execute the scanner.
+
+The scanner expects a repository structure similar to the following:
 
 ```text
 consumer-project/
@@ -52,7 +79,7 @@ If the root directory is not named `apiproxies`, update
 #### Configurable values
 
 | Variable | Default | Description |
-|----------|---------|-------------|
+|---|---|---|
 | `APIGEE_PROXY_ROOT` | `apiproxies` | Root directory searched recursively for `apiproxy` bundles. |
 | `APIGEELINT_SECURITY_REF` | `v0.2.0` | Version of the scanner package installed by the CI job. |
 
@@ -66,7 +93,14 @@ apigeelint-stderr.log
 gl-sast-report.json
 ```
 
-`gl-sast-report.json` is published as a GitLab SAST report. After the pipeline completes, open the pipeline and go to the **Security** tab to review the detected findings.
+- `apigeelint-results.json` contains the merged ApigeeLint findings;
+- `apigeelint-stderr.log` contains technical messages generated during the
+  scan;
+- `gl-sast-report.json` contains the findings converted to GitLab SAST format.
+
+`gl-sast-report.json` is published as a GitLab SAST report. After the pipeline
+completes, open the pipeline and go to the **Security** tab to review the
+detected findings.
 
 ApigeeLint findings do not stop the scan. A job fails only when the scanner
 cannot run or cannot generate a valid report.
@@ -119,6 +153,13 @@ the consumer project.
 This section is intended for maintainers of the scanner and its security
 plugins.
 
+### Requirements
+
+- Node.js 20 or later;
+- npm;
+- Bash or Git Bash;
+- npm configured to use the corporate Artifactory registry.
+
 ### Install dependencies
 
 ```bash
@@ -150,8 +191,13 @@ node -e "JSON.parse(require('fs').readFileSync('gl-sast-report.json', 'utf8')); 
 npm run pack:check
 ```
 
-The package must contain only the CLI, scanner script, converter, plugins and
-README. Test bundles and CI files must not be packaged.
+The package must contain only the runtime files declared in `package.json`,
+including the CLI, scanner script, converter, plugins and README.
+
+Test bundles and CI files must not be included in the npm package.
+
+The package validation CI job creates the package, installs it in an isolated
+directory and executes it against the repository test bundles.
 
 ### Main project files
 
@@ -175,13 +221,14 @@ apiproxies/
     Test bundles used only by the scanner project.
 ```
 
-
 ### Native ApigeeLint exclusions
 
 The scanner excludes a predefined set of native ApigeeLint rules by default.
 
+## Release process
 
-### Release process
+The package is installed directly from a GitLab tag. It is not published to a
+public npm registry.
 
 Scanner versions are published as immutable Git tags.
 
@@ -197,6 +244,13 @@ To publish a new scanner version:
 8. merge the branch;
 9. create and push the corresponding Git tag.
 
+The npm package version and Git tag must remain aligned:
+
+```text
+package.json version: 0.2.0
+Git tag:              v0.2.0
+```
+
 Example:
 
 ```bash
@@ -204,5 +258,63 @@ git tag -a v0.2.0 -m "ApigeeLint security scanner v0.2.0"
 git push origin v0.2.0
 ```
 
+Existing release tags must not be moved or reused.
+
 Consumer projects should always reference a released version tag rather than
 `main` or a development branch.
+
+## Troubleshooting
+
+### CI job token authentication is rejected
+
+Confirm that the consumer project or its parent group is authorized in the
+scanner project's **Settings > CI/CD > Job token permissions**.
+
+Without this authorization, the consumer pipeline cannot install the scanner
+package from its GitLab repository.
+
+### No `apiproxy` directory is found
+
+Verify the value of:
+
+```yaml
+APIGEE_PROXY_ROOT
+```
+
+It must point to an existing directory in the consumer repository. The scanner
+then searches recursively below that directory for folders named `apiproxy`.
+
+### npm installation fails
+
+Verify that:
+
+- the consumer project is authorized through the CI job token allowlist;
+- the Artifactory configuration and credentials are available to the job;
+- the internal npm registry is reachable from the GitLab runner;
+- `APIGEELINT_SECURITY_REF` references an existing scanner tag.
+
+### The Security tab is empty
+
+Verify that the scanner job generated and uploaded:
+
+```text
+gl-sast-report.json
+```
+
+Also check the job logs and the following artifacts:
+
+```text
+apigeelint-results.json
+apigeelint-stderr.log
+```
+
+### The scanner version cannot be installed
+
+Verify that the following values reference the same existing version:
+
+```yaml
+ref: 'v0.2.0'
+
+variables:
+  APIGEELINT_SECURITY_REF: 'v0.2.0'
+```
