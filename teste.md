@@ -68,9 +68,6 @@ services/apiproxies/
 src/main/apigee/
 ```
 
-Only `APIGEE_PROXY_ROOT` needs to change when the repository uses another
-directory.
-
 ### Generated reports
 
 The CI job generates:
