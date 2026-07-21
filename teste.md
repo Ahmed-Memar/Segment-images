@@ -28,9 +28,6 @@ The scanner searches recursively for directories named `apiproxy`, so a
 consumer repository can contain one or several proxies under the same root
 directory.
 
-If the root directory is not named `apiproxies`, update
-`APIGEE_PROXY_ROOT` in `.gitlab-ci.yml`.
-
 Add the following configuration to the consumer project's `.gitlab-ci.yml`:
 
 ```yaml
@@ -46,6 +43,9 @@ variables:
   APIGEELINT_SECURITY_REF: 'v0.2.0'
   APIGEE_PROXY_ROOT: 'apiproxies'
 ```
+
+If the root directory is not named `apiproxies`, update
+`APIGEE_PROXY_ROOT` in `.gitlab-ci.yml`.
 
 `ref` and `APIGEELINT_SECURITY_REF` must use the same scanner version.
 
