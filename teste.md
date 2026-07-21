@@ -12,7 +12,7 @@ generates a GitLab SAST report.
 
 GitLab CI is the recommended way to use the scanner.
 
-A minimal consumer repository can use the following structure:
+The scanner expects a repository structure similar to the following:
 
 ```text
 consumer-project/
