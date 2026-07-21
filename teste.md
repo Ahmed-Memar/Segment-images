@@ -12,7 +12,7 @@ Two options are available:
 
 ### 1. GitLab CI — Recommended
 
-The scanner expects a repository structure similar to the following:
+A typical consumer repository has the following structure:
 
 ```text
 consumer-project/
