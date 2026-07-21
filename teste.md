@@ -45,7 +45,7 @@ variables:
 ```
 
 If the root directory is not named `apiproxies`, update
-`APIGEE_PROXY_ROOT` in `.gitlab-ci.yml`.
+`APIGEE_PROXY_ROOT` accordingly.
 
 `ref` and `APIGEELINT_SECURITY_REF` must use the same scanner version.
 
