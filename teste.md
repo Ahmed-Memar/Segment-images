@@ -3,60 +3,30 @@
 This repository provides an Apigee security scanner based on
 [ApigeeLint](https://github.com/apigee/apigeelint) and custom security plugins.
 
-It recursively discovers Apigee proxy bundles, runs the security controls and
-generates a GitLab SAST report.
-
-## How it works
-
-The reusable CI job:
-
-1. installs a tagged version of this repository as an npm package;
-2. recursively discovers every directory named `apiproxy`;
-3. runs ApigeeLint with the custom security plugins;
-4. merges the findings from all discovered bundles;
-5. generates a GitLab SAST report.
-
-Consumer projects do not need to copy the scanner plugins, scripts or
-converter.
+The scanner recursively discovers directories named `apiproxy`, runs the
+security controls and generates a GitLab SAST report.
 
 ## Consumer usage
 
-Two options are available:
+Two execution modes are available:
 
 1. GitLab CI, which is the recommended method;
 2. local execution with the standalone package.
 
-## 1. GitLab CI — Recommended
+## GitLab CI — Recommended
 
 ### Prerequisites
 
-Before using the scanner:
+The consumer repository must contain one or more Apigee proxy bundles.
 
-- the consumer project must contain one or more Apigee proxy bundles;
-- the scanner project must authorize the consumer project or its parent group
-  in **Settings > CI/CD > Job token permissions**;
-- the corporate Artifactory configuration and credentials used by the shared
-  pipeline must be available to the CI job.
-
-The scanner package is installed directly from its GitLab repository.
-Therefore, the CI job token allowlist must be configured before the consumer
-pipeline can install and execute the scanner.
-
-The scanner expects a repository structure similar to:
+The consumer project or its parent group must also be authorized in the
+scanner project's:
 
 ```text
-consumer-project/
-├── .gitlab-ci.yml
-└── apiproxies/
-    ├── proxy1/
-    │   └── apiproxy/
-    └── proxy2/
-        └── apiproxy/
+Settings > CI/CD > Job token permissions
 ```
 
-The scanner searches recursively for directories named `apiproxy`. A consumer
-repository can therefore contain one or several proxies under the same root
-directory.
+### Configuration
 
 Add the following configuration to the consumer project's `.gitlab-ci.yml`:
 
@@ -74,24 +44,33 @@ variables:
   APIGEE_PROXY_ROOT: 'apiproxies'
 ```
 
-If the root directory is not named `apiproxies`, update
-`APIGEE_PROXY_ROOT` accordingly.
-
 `ref` and `APIGEELINT_SECURITY_REF` must use the same scanner version.
 
-### Configurable values
+### Configuration variables
 
 | Variable | Default | Description |
 |---|---|---|
+| `APIGEELINT_SECURITY_REF` | `v0.2.1` | Scanner version installed by the CI job |
 | `APIGEE_PROXY_ROOT` | `apiproxies` | Root directory searched recursively for `apiproxy` bundles |
-| `APIGEELINT_SECURITY_REF` | `v0.2.1` | Version of the scanner package installed by the CI job |
 
-The scanner project path and reusable template path are maintained internally
-and do not need to be configured by consumer projects.
+Example repository structure:
+
+```text
+consumer-project/
+├── .gitlab-ci.yml
+└── apiproxies/
+    ├── proxy1/
+    │   └── apiproxy/
+    └── proxy2/
+        └── apiproxy/
+```
+
+The root directory can have another name. In that case, update
+`APIGEE_PROXY_ROOT`.
 
 ### Generated reports
 
-The CI job generates:
+The scanner generates:
 
 ```text
 apigeelint-results.json
@@ -99,23 +78,19 @@ apigeelint-stderr.log
 gl-sast-report.json
 ```
 
-- `apigeelint-results.json` contains the merged ApigeeLint findings;
-- `apigeelint-stderr.log` contains technical messages generated during the
-  scan;
-- `gl-sast-report.json` contains the findings converted to GitLab SAST format.
+`gl-sast-report.json` is published as a GitLab SAST report.
 
-`gl-sast-report.json` is published as a GitLab SAST report. After the pipeline
-completes, open the pipeline and go to the **Security** tab to review the
-detected findings.
+After the pipeline completes, open its **Security** tab to review the
+findings.
 
-ApigeeLint findings do not stop the scan. A job fails only when the scanner
-cannot run or cannot generate a valid report.
+ApigeeLint findings do not fail the CI job. The job fails only when the
+scanner cannot run or cannot generate a valid report.
 
-## 2. Local execution — Optional
+## Local execution — Optional
 
-Local execution can be used to check Apigee proxies before pushing changes.
+Local execution can be used to scan proxies before pushing changes.
 
-The standalone package already contains ApigeeLint and its required runtime
+The standalone package already contains ApigeeLint and its runtime
 dependencies. No npm registry, Artifactory configuration or `.npmrc` file is
 required.
 
@@ -123,16 +98,13 @@ required.
 
 - Node.js 20 or later;
 - Bash or Git Bash;
-- the standalone scanner package:
+- the standalone package:
 
 ```text
 apigeelint-security-plugins-0.2.1.tgz
 ```
 
-Download the standalone package and place it in the project directory
-containing the proxies.
-
-Example:
+Place the package in the project containing the proxies:
 
 ```text
 consumer-project/
@@ -146,49 +118,30 @@ consumer-project/
 
 ### Install the scanner
 
-From the consumer project directory, run:
+From the consumer project directory:
 
 ```bash
 npm install --offline --no-save --package-lock=false \
   ./apigeelint-security-plugins-0.2.1.tgz
 ```
 
-The `--offline` option ensures that npm does not contact an npm registry or
-Artifactory.
-
-The `--no-save` and `--package-lock=false` options prevent the scanner from
-being added as a permanent project dependency.
-
-### Scan a directory
-
-Scan every proxy under the default `apiproxies` directory:
-
-```bash
-./node_modules/.bin/apigeelint-security scan apiproxies
-```
-
-Scan proxies stored under another directory:
+### Scan multiple proxies
 
 ```bash
 ./node_modules/.bin/apigeelint-security scan mybundles
 ```
 
-The scanner recursively searches the provided path for directories named
+The scanner recursively discovers and scans every directory named
 `apiproxy`.
 
-For example, if `mybundles` contains eight `apiproxy` directories, the scanner
-automatically discovers and scans all eight bundles.
-
-### Scan one specific proxy
+### Scan one proxy
 
 ```bash
 ./node_modules/.bin/apigeelint-security scan \
   path/to/my-proxy/apiproxy
 ```
 
-### Local reports
-
-The scan generates the following files in the current working directory:
+The reports are generated in the current working directory:
 
 ```text
 apigeelint-results.json
@@ -196,23 +149,12 @@ apigeelint-stderr.log
 gl-sast-report.json
 ```
 
-An `ApigeeLint exit code: 1` displayed for an individual proxy means that
-ApigeeLint detected findings. It does not mean that the complete scanner
-execution failed.
+An individual `ApigeeLint exit code: 1` means that findings were detected. It
+does not mean that the complete scanner execution failed.
 
-A successful complete execution ends with messages similar to:
+### Files not to commit
 
-```text
-All Apigee proxy bundles were scanned successfully.
-Converted 108 ApigeeLint findings to gl-sast-report.json
-```
-
-The number of bundles and findings depends on the scanned project.
-
-### Files that should not be committed
-
-Add the following entries to the consumer project's `.gitignore` when
-necessary:
+Add these entries to the consumer project's `.gitignore` when necessary:
 
 ```gitignore
 node_modules/
@@ -222,24 +164,16 @@ gl-sast-report.json
 apigeelint-security-plugins-*.tgz
 ```
 
-The standalone package is intended for temporary local execution and should
-not be added as a permanent project dependency.
-
 ## Scanner development
 
-This section is intended for maintainers of the scanner and its custom
-security plugins.
+This section is intended for scanner maintainers.
 
 ### Requirements
 
 - Node.js 20 or later;
 - npm;
 - Bash or Git Bash;
-- npm configured to use the corporate Artifactory registry.
-
-Artifactory access is required to install the dependencies used to build the
-scanner package. It is not required by consumers who install the standalone
-`.tgz` package locally.
+- access to the corporate npm Artifactory.
 
 ### Install dependencies
 
@@ -260,35 +194,7 @@ npm run scan -- \
   apiproxies/common/odm-shared-oauth2_server/apiproxy
 ```
 
-### Validate the generated report
-
-Verify that the generated report is valid JSON:
-
-```bash
-node -e "JSON.parse(require('fs').readFileSync('gl-sast-report.json', 'utf8')); console.log('SAST report valid')"
-```
-
-Verify that the timestamps use the format required by the GitLab SAST schema:
-
-```bash
-node -e 'const r=require("./gl-sast-report.json"); const p=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/; if(!p.test(r.scan.start_time)||!p.test(r.scan.end_time)){console.error("Invalid GitLab timestamps");process.exit(1)} console.log("GitLab timestamps valid")'
-```
-
-Expected timestamp format:
-
-```text
-YYYY-MM-DDTHH:mm:ss
-```
-
-Example:
-
-```text
-2026-07-21T14:29:27
-```
-
-### Validate the package contents
-
-Run:
+### Validate the package
 
 ```bash
 npm run pack:check
@@ -300,14 +206,9 @@ The package must contain:
 - the scanner script;
 - the GitLab SAST converter;
 - the custom security plugins;
-- the README;
-- the bundled runtime dependencies required for offline execution.
+- the bundled runtime dependencies.
 
-Test proxy bundles, CI configuration files and generated reports must not be
-included in the package.
-
-Because the runtime dependencies are bundled, the package contents contain
-more files than a normal package without bundled dependencies.
+Test bundles, CI files and generated reports must not be packaged.
 
 ### Generate the standalone package
 
@@ -315,13 +216,13 @@ more files than a normal package without bundled dependencies.
 npm pack
 ```
 
-For version `0.2.1`, this generates:
+For version `0.2.1`, the generated package is:
 
 ```text
 apigeelint-security-plugins-0.2.1.tgz
 ```
 
-Verify that ApigeeLint is included in the package:
+Verify that ApigeeLint is bundled:
 
 ```bash
 tar -tf apigeelint-security-plugins-0.2.1.tgz \
@@ -334,120 +235,53 @@ Expected result:
 package/node_modules/apigeelint/package.json
 ```
 
-### Validate offline installation
+The GitLab `test_npm_package` job also installs and executes the generated
+package in an isolated directory.
 
-Create an isolated test directory:
-
-```bash
-cd "$HOME"
-rm -rf apigeelint-offline-test
-mkdir apigeelint-offline-test
-cd apigeelint-offline-test
-npm init -y
-```
-
-Remove any previous test cache and install the package with offline mode and
-an empty cache:
-
-```bash
-rm -rf node_modules package-lock.json
-rm -rf "$HOME/apigeelint-empty-cache"
-
-npm install --offline \
-  --cache "$HOME/apigeelint-empty-cache" \
-  --no-save \
-  --package-lock=false \
-  "$HOME/apigeelint-security-plugins/apigeelint-security-plugins-0.2.1.tgz"
-```
-
-Run the packaged scanner against a directory containing test bundles:
-
-```bash
-./node_modules/.bin/apigeelint-security scan \
-  "$HOME/consumer project/mybundles"
-```
-
-A successful installation with `--offline` and an empty cache confirms that
-the standalone package contains every required runtime dependency.
-
-The `test_npm_package` GitLab CI job performs the same type of isolated package
-validation automatically.
-
-### Main project files
+## Main project files
 
 ```text
 bin/apigeelint-security.js
     Public CLI entry point.
 
 scripts/scan-all-apigee-proxies.sh
-    Discovers and scans every apiproxy directory.
+    Discovers and scans apiproxy directories.
 
 security-lint-plugins/
-    Custom ApigeeLint security controls.
+    Custom security controls.
 
 convert-apigeelint-to-gitlab-sast.js
-    Converts ApigeeLint findings to GitLab SAST format.
+    Converts findings to GitLab SAST format.
 
 ci/apigeelint-security.yml
-    Reusable GitLab CI template for consumer projects.
+    Reusable CI template for consumer projects.
 
 apiproxies/
-    Test bundles used only by the scanner project.
-
-package.json
-    npm package metadata, CLI declaration and bundled dependencies.
-
-.gitlab-ci.yml
-    Internal scanner validation pipeline.
+    Test bundles used by the scanner project.
 ```
-
-### Native ApigeeLint exclusions
-
-The scanner excludes a predefined set of native ApigeeLint rules by default.
-
-These exclusions are maintained by the scanner project so that consumer
-projects receive the same security control configuration.
 
 ## Release process
 
-The scanner supports two distribution methods:
+Scanner versions are distributed through immutable Git tags.
 
-- GitLab CI installs the scanner directly from an immutable Git tag;
-- local users install the standalone `.tgz` package.
-
-The scanner is not published to the public npm registry.
-
-Scanner versions are published as immutable Git tags.
-
-### Publish a new version
-
-To publish a new scanner version:
-
-1. update the version in `package.json`;
-2. update `package-lock.json`;
-3. update the default version in `ci/apigeelint-security.yml`;
-4. update all version examples in the README;
-5. run the JavaScript and Bash syntax checks;
-6. run the complete local test scan;
-7. validate the generated SAST report;
-8. run `npm run pack:check`;
-9. generate the standalone package with `npm pack`;
-10. verify that ApigeeLint is included in the `.tgz`;
-11. verify that the package can be installed with `npm install --offline`;
-12. commit and push the changes;
-13. verify that both GitLab validation jobs succeed;
-14. merge the branch;
-15. create and push the corresponding Git tag;
-16. make the generated standalone `.tgz` package available to local
-    consumers.
-
-The npm package version and Git tag must remain aligned:
+The Git tag, npm package version and standalone package must remain aligned:
 
 ```text
-package.json version: 0.2.1
-Git tag:              v0.2.1
-Package:              apigeelint-security-plugins-0.2.1.tgz
+package.json: 0.2.1
+Git tag:      v0.2.1
+Package:      apigeelint-security-plugins-0.2.1.tgz
 ```
+
+To publish a new version:
+
+1. update `package.json` and `package-lock.json`;
+2. update the default version in `ci/apigeelint-security.yml`;
+3. update the README examples;
+4. run the local scan and package validations;
+5. commit and push the changes;
+6. verify that the GitLab pipeline succeeds;
+7. merge the branch and create the corresponding Git tag;
+8. generate and provide the standalone `.tgz` package.
 
 Example:
 
@@ -456,88 +290,30 @@ git tag -a v0.2.1 -m "ApigeeLint security scanner v0.2.1"
 git push origin v0.2.1
 ```
 
-Generate the standalone package from the released version:
+Existing release tags must not be moved or reused.
 
-```bash
-npm ci
-npm pack
-```
-
-The generated release file is:
-
-```text
-apigeelint-security-plugins-0.2.1.tgz
-```
-
-Existing release tags must not be moved, replaced or reused.
-
-Consumer projects should always reference a released version tag rather than
-`main` or a development branch.
+Consumer projects should always reference a released tag rather than `main`
+or a development branch.
 
 ## Troubleshooting
 
-### CI job token authentication is rejected
+### CI authentication is rejected
 
-Confirm that the consumer project or its parent group is authorized in the
-scanner project's:
+Confirm that the consumer project or its parent group is authorized in:
 
 ```text
 Settings > CI/CD > Job token permissions
 ```
 
-Without this authorization, the consumer pipeline cannot install the scanner
-package from its GitLab repository.
+### No proxy is found
 
-### No `apiproxy` directory is found
+Verify that `APIGEE_PROXY_ROOT` points to an existing directory containing one
+or more directories named `apiproxy`.
 
-Verify the value of:
-
-```text
-APIGEE_PROXY_ROOT
-```
-
-It must point to an existing directory in the consumer repository.
-
-The scanner then searches recursively below that directory for folders named
-`apiproxy`.
-
-For local execution, verify that the path passed to the CLI exists:
+For local execution, verify the path passed to the command:
 
 ```bash
 ./node_modules/.bin/apigeelint-security scan mybundles
-```
-
-### CI npm installation fails
-
-Verify that:
-
-- the consumer project is authorized through the CI job token allowlist;
-- the Artifactory configuration and credentials are available to the CI job;
-- the internal npm registry is reachable from the GitLab runner;
-- `APIGEELINT_SECURITY_REF` references an existing scanner tag.
-
-### Local package installation fails
-
-Verify that:
-
-- Node.js 20 or later is installed;
-- the `.tgz` path is correct;
-- the package version exists;
-- the complete standalone package was downloaded;
-- the installation command uses the local `.tgz` file.
-
-Example:
-
-```bash
-npm install --offline --no-save --package-lock=false \
-  ./apigeelint-security-plugins-0.2.1.tgz
-```
-
-Verify that the package contains ApigeeLint:
-
-```bash
-tar -tf apigeelint-security-plugins-0.2.1.tgz \
-  | grep "node_modules/apigeelint/package.json"
 ```
 
 ### The Security tab is empty
@@ -548,37 +324,33 @@ Verify that the scanner job generated and uploaded:
 gl-sast-report.json
 ```
 
-Also check the job logs and the following artifacts:
+Also check:
 
 ```text
 apigeelint-results.json
 apigeelint-stderr.log
 ```
 
-If GitLab reports a security report parsing error, verify that
-`scan.start_time` and `scan.end_time` use this exact format:
-
-```text
-YYYY-MM-DDTHH:mm:ss
-```
-
-The values must not contain milliseconds or a trailing `Z`.
-
 ### The scanner version cannot be installed
 
-Verify that the following values reference the same existing version:
+Verify that both values reference the same existing tag:
 
 ```yaml
 ref: 'v0.2.1'
-```
 
-```yaml
 variables:
   APIGEELINT_SECURITY_REF: 'v0.2.1'
 ```
 
-Also verify that the corresponding package version is:
+### Local installation fails
 
-```text
-0.2.1
+Verify that:
+
+- Node.js 20 or later is installed;
+- the `.tgz` file exists at the provided path;
+- the complete standalone package was downloaded.
+
+```bash
+npm install --offline --no-save --package-lock=false \
+  ./apigeelint-security-plugins-0.2.1.tgz
 ```
