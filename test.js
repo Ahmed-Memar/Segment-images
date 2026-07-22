@@ -1,6 +1,2 @@
-npm install --offline --no-save \
-  "$HOME/apigeelint-security-plugins/apigeelint-security-plugins-0.2.1.tgz"
-
-
-
-ls node_modules/.bin
+./node_modules/.bin/apigeelint-security scan \
+  "$HOME/consumer project/mybundles"
