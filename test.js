@@ -1,14 +1,1 @@
-cd ~/apigeelint-security-plugins
-npm config get registry
-ls -la | grep npmrc
-
-
-
-
-cd ~/apigeelint-security-plugins
-npm config list
-
-
-
-cd "$HOME/consumer project"
-npm config list
+tar -tf apigeelint-security-plugins-0.2.1.tgz | grep "node_modules/apigeelint/package.json"
