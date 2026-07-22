@@ -92,10 +92,6 @@ scanner cannot run or cannot generate a valid report.
 
 Local execution can be used to scan proxies before pushing changes.
 
-The standalone package already contains ApigeeLint and its runtime
-dependencies. No npm registry, Artifactory configuration or `.npmrc` file is
-required.
-
 ### Requirements
 
 - Node.js 20 or later;
