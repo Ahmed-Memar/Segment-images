@@ -100,13 +100,32 @@ required.
 
 - Node.js 20 or later;
 - Bash or Git Bash;
-- the standalone package:
+- access to the ApigeeLint Security Scanner project in GitLab.
 
-```text
-apigeelint-security-plugins-0.2.1.tgz
-```
+### Obtain the standalone package
 
-Place the package in the project containing the proxies:
+For each released scanner version, a standalone `.tgz` package is published
+with the corresponding GitLab release.
+
+To obtain version `v0.2.1`:
+
+1. open the ApigeeLint Security Scanner project in GitLab:
+
+   ```text
+   gf/ITG-ITRMG/CDF-EXI-AppSec/appsec-tools/apigeelint-security-plugins
+   ```
+
+2. go to **Deploy > Releases**;
+3. open release `v0.2.1`;
+4. download:
+
+   ```text
+   apigeelint-security-plugins-0.2.1.tgz
+   ```
+
+5. copy the downloaded file to the root of the consumer project.
+
+Example:
 
 ```text
 consumer-project/
@@ -117,6 +136,10 @@ consumer-project/
     └── proxy2/
         └── apiproxy/
 ```
+
+Access to GitLab is required only to download the package. After the package
+has been downloaded, installation and scanner execution do not require an npm
+registry, Artifactory configuration or a `.npmrc` file.
 
 ### Install the scanner
 
