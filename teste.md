@@ -193,7 +193,7 @@ npm run scan -- apiproxies
 
 ```bash
 npm run scan -- \
-  apiproxies/common/odm-shared-oauth2_server/apiproxy
+  path/to/my-proxy/apiproxy
 ```
 
 ### Validate the package
