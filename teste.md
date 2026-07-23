@@ -237,6 +237,10 @@ For version `0.2.1`, the generated package is:
 apigeelint-security-plugins-0.2.1.tgz
 ```
 
+Do not commit the generated `.tgz` file. It is created locally only for
+validation. The tag pipeline generates, validates and publishes the official
+release package automatically.
+
 Verify that ApigeeLint is bundled:
 
 ```bash
@@ -250,8 +254,8 @@ Expected result:
 package/node_modules/apigeelint/package.json
 ```
 
-The GitLab `test_npm_package` job also installs and executes the generated
-package in an isolated directory.
+The GitLab `test_npm_package` job installs the generated package in offline
+mode with an empty npm cache, then executes it from an isolated directory.
 
 ## Main project files
 
