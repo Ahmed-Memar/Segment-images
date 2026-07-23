@@ -13,7 +13,7 @@ Two execution modes are available:
 1. GitLab CI, which is the recommended method;
 2. local execution with the standalone package.
 
-## GitLab CI — Recommended
+## 1. GitLab CI — Recommended
 
 ### Prerequisites
 
@@ -81,7 +81,7 @@ findings.
 ApigeeLint findings do not fail the CI job. The job fails only when the
 scanner cannot run or cannot generate a valid report.
 
-## Local execution — Optional
+## 2. Local execution — Optional
 
 Local execution can be used to scan proxies before pushing changes.
 
@@ -93,8 +93,9 @@ Local execution can be used to scan proxies before pushing changes.
 
 ### Obtain the standalone package
 
-For each released scanner version, a standalone `.tgz` package is published
-with the corresponding GitLab release.
+For each version tag, the GitLab pipeline publishes the standalone `.tgz`
+package to the Generic Package Registry and attaches it to the corresponding
+GitLab Release.
 
 To obtain version `v0.2.1`:
 
