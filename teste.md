@@ -400,6 +400,10 @@ Also verify that the package is visible under:
 
 ```text
 Deploy > Package registry
+```
+
+The Release download link points to the package stored in the Generic Package
+Registry.
 
 ### Local installation fails
 
@@ -412,3 +416,4 @@ Verify that:
 ```bash
 npm install --offline --no-save --package-lock=false \
   ./apigeelint-security-plugins-0.2.1.tgz
+```
