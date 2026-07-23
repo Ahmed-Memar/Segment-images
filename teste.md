@@ -269,6 +269,9 @@ scripts/scan-all-apigee-proxies.sh
 security-lint-plugins/
     Custom security controls.
 
+.gitlab-ci.yml
+    Validates the packaged scanner and publishes tagged releases.
+
 convert-apigeelint-to-gitlab-sast.js
     Converts findings to GitLab SAST format.
 
