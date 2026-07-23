@@ -71,16 +71,9 @@ If the root directory is not named `apiproxies`, update
 
 The scanner generates:
 
-```text
-apigeelint-results.json
-apigeelint-stderr.log
-gl-sast-report.json
-```
-
-- `apigeelint-results.json` contains the merged ApigeeLint findings;
-- `apigeelint-stderr.log` contains technical messages generated during the
-  scan;
-- `gl-sast-report.json` contains the findings converted to GitLab SAST format. Then it is published as a GitLab SAST report. 
+- `apigeelint-results.json` — merged ApigeeLint findings;
+- `apigeelint-stderr.log` — scanner execution logs;
+- `gl-sast-report.json` — findings converted and published as a GitLab SAST report. 
 
 After the pipeline completes, open its **Security** tab to review the
 findings.
