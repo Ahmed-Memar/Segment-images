@@ -402,4 +402,15 @@ Verify that:
 ```bash
 npm install --offline --no-save --package-lock=false \
   ./apigeelint-security-plugins-0.2.1.tgz
+
+
+### The `.tgz` package is missing from the Release
+
+Verify that the pipeline for the corresponding version tag succeeded and that
+the `publish_release` job completed successfully.
+
+Also verify that the package is visible under:
+
+```text
+Deploy > Package registry
 ```
