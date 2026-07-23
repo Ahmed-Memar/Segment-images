@@ -284,7 +284,10 @@ apiproxies/
 
 ## Release process
 
-Scanner versions are distributed through immutable Git tags.
+Scanner versions are distributed through:
+
+- immutable Git tags for GitLab CI;
+- standalone `.tgz` packages attached to GitLab Releases for local execution.
 
 The Git tag, npm package version and standalone package must remain aligned:
 
@@ -296,20 +299,44 @@ Package:      apigeelint-security-plugins-0.2.1.tgz
 
 To publish a new version:
 
-1. update `package.json` and `package-lock.json`;
+1. update the version in `package.json` and `package-lock.json`;
 2. update the default version in `ci/apigeelint-security.yml`;
-3. update the README examples;
+3. update the version examples in the README;
 4. run the local scan and package validations;
-5. commit and push the changes;
-6. verify that the GitLab pipeline succeeds;
-7. merge the branch and create the corresponding Git tag;
-8. generate and provide the standalone `.tgz` package.
+5. commit and push the changes to the development branch;
+6. verify that the branch pipeline succeeds;
+7. create and push the corresponding Git tag from the validated commit;
+8. verify that the tag pipeline publishes the package and creates the GitLab
+   Release;
+9. validate the released version from a consumer project;
+10. merge the validated development branch.
 
 Example:
 
 ```bash
 git tag -a v0.2.1 -m "ApigeeLint security scanner v0.2.1"
 git push origin v0.2.1
+```
+
+When the tag is pushed, the GitLab pipeline automatically:
+
+1. generates the standalone `.tgz` package;
+2. installs and tests it in offline mode;
+3. publishes it to the Generic Package Registry;
+4. creates the corresponding GitLab Release;
+5. attaches the package download link to the Release.
+
+After the tag pipeline succeeds, verify:
+
+```text
+Deploy > Package registry
+Deploy > Releases
+```
+
+The release must contain:
+
+```text
+apigeelint-security-plugins-0.2.1.tgz
 ```
 
 Existing release tags must not be moved or reused.
