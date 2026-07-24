@@ -1,64 +1,54 @@
-grep -R -n \
-  "apigeelint-security-plugins-0.2.0\|v0.2.0" \
-  README.md \
-  ci/apigeelint-security.yml \
-  package.json \
-  package-lock.json
+grep -n "npm install" ci/apigeelint-security.yml
+
+
+
+node -e '
+const p = require("./package.json");
+console.log(JSON.stringify({
+  dependencies: p.dependencies,
+  devDependencies: p.devDependencies,
+  bundleDependencies: p.bundleDependencies,
+  bundledDependencies: p.bundledDependencies,
+  scripts: p.scripts
+}, null, 2));
+'
 
 
 
 
-
-grep -nE \
-  '^  - release$|^publish_release:|package-tarball-name\.txt|packages/generic|projects/.*/releases' \
-  .gitlab-ci.yml
-
-
-
-
-
-
-grep -n "^publish_release:" .gitlab-ci.yml
+{
+  "dependencies": {
+    "apigeelint": "VERSION_ACTUELLE"
+  },
+  "bundleDependencies": [
+    "apigeelint"
+  ]
+}
 
 
 
 
-tail -n 120 .gitlab-ci.yml
-
-
-git diff --check
-
-
-
-git diff --stat
+node -p \
+  "require('./package-lock.json').packages['node_modules/apigeelint'].version"
 
 
 
-
-git status
-
-
-
-
-git add \
-  .gitignore \
-  .gitlab-ci.yml \
-  README.md \
-  ci/apigeelint-security.yml \
-  package.json \
-  package-lock.json
+node -e '
+const p = require("./package.json");
+console.log(JSON.stringify({
+  dependencies: p.dependencies,
+  devDependencies: p.devDependencies,
+  bundleDependencies: p.bundleDependencies,
+  bundledDependencies: p.bundledDependencies
+}, null, 2));
+'
 
 
 
 
-git diff --cached --stat
-git status
+node -p \
+  "require('./package-lock.json').packages['node_modules/apigeelint'].version"
 
 
 
-git commit -m "Prepare ApigeeLint security scanner v0.2.1"
-git push origin docker-runtime
-
-
-
-
+grep -n "npm install" ci/apigeelint-security.yml
