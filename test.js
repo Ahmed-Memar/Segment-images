@@ -1,54 +1,80 @@
-grep -n "npm install" ci/apigeelint-security.yml
-
-
-
-node -e '
-const p = require("./package.json");
-console.log(JSON.stringify({
-  dependencies: p.dependencies,
-  devDependencies: p.devDependencies,
-  bundleDependencies: p.bundleDependencies,
-  bundledDependencies: p.bundledDependencies,
-  scripts: p.scripts
-}, null, 2));
-'
+npm version 0.2.2 --no-git-tag-version
 
 
 
 
-{
-  "dependencies": {
-    "apigeelint": "VERSION_ACTUELLE"
-  },
-  "bundleDependencies": [
-    "apigeelint"
-  ]
+
+node -p "require('./package.json').version"
+
+
+
+"scripts": {
+  "sec-audit": "node node_modules/apigeelint/cli.js -f table.js -x security-lint-plugins/",
+  "scan": "node bin/apigeelint-security.js scan",
+  "pack:check": "npm pack --dry-run",
+  "prepare": "node -e \"require.resolve('apigeelint/cli.js')\""
 }
 
 
 
 
-node -p \
-  "require('./package-lock.json').packages['node_modules/apigeelint'].version"
+APIGEELINT_SECURITY_REF: "v0.2.2"
+
 
 
 
 node -e '
 const p = require("./package.json");
 console.log(JSON.stringify({
+  version: p.version,
   dependencies: p.dependencies,
-  devDependencies: p.devDependencies,
-  bundleDependencies: p.bundleDependencies,
-  bundledDependencies: p.bundledDependencies
+  bundledDependencies: p.bundledDependencies,
+  prepare: p.scripts.prepare
 }, null, 2));
 '
 
 
 
-
-node -p \
-  "require('./package-lock.json').packages['node_modules/apigeelint'].version"
+rm -f apigeelint-security-plugins-0.2.1.tgz
 
 
 
-grep -n "npm install" ci/apigeelint-security.yml
+
+npm ci --foreground-scripts
+
+
+
+
+npm run scan -- apiproxies
+
+
+
+npm run pack:check
+npm pack
+
+
+
+
+tar -tf apigeelint-security-plugins-0.2.2.tgz \
+  | grep "node_modules/apigeelint/package.json"
+
+
+
+
+git diff --check
+
+
+
+
+
+git status
+git diff --stat
+
+
+
+
+grep -R -n \
+  "apigeelint-security-plugins-0.2.1\|v0.2.1" \
+  README.md \
+  ci/apigeelint-security.yml \
+  package.json
